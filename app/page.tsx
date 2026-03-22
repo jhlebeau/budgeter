@@ -7,10 +7,10 @@ export default function Home() {
       <p className="mb-6 text-zinc-600">Choose what you want to do:</p>
       <div className="flex flex-col gap-3">
         <Link
-          href="/categories"
+          href="/settings"
           className="rounded border px-4 py-3 text-center font-medium hover:bg-zinc-50"
         >
-          Create Spending Categories
+          Settings
         </Link>
         <Link
           href="/transactions"

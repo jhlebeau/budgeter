@@ -22,9 +22,30 @@ export type TransactionInput = {
   note: string;
 };
 
+export type Income = {
+  id: number;
+  source: string;
+  amount: number;
+  taxType: "pre" | "post";
+  taxMethod: "manual" | "auto";
+  taxState: "CA" | "TX" | "MA" | null;
+  taxRate: number;
+  postTaxAmount: number;
+};
+
+export type IncomeInput = {
+  source: string;
+  amount: number;
+  taxType: "pre" | "post";
+  taxMethod: "manual" | "auto";
+  taxState: "CA" | "TX" | "MA" | null;
+  taxRate: number;
+};
+
 type BudgetContextValue = {
   categories: Category[];
   transactions: Transaction[];
+  incomes: Income[];
   addCategory: (name: string, monthlyLimit: number) => boolean;
   updateCategoryLimit: (name: string, monthlyLimit: number) => void;
   updateCategoryName: (currentName: string, nextName: string) => boolean;
@@ -32,6 +53,9 @@ type BudgetContextValue = {
   addTransaction: (transaction: TransactionInput) => void;
   updateTransaction: (id: number, transaction: TransactionInput) => void;
   deleteTransaction: (id: number) => void;
+  addIncome: (income: IncomeInput) => void;
+  updateIncome: (id: number, income: IncomeInput) => void;
+  deleteIncome: (id: number) => void;
 };
 
 const BudgetContext = createContext<BudgetContextValue | null>(null);
@@ -39,6 +63,7 @@ const BudgetContext = createContext<BudgetContextValue | null>(null);
 export function BudgetProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
 
   const addCategory = (name: string, monthlyLimit: number) => {
     const nextName = name.trim();
@@ -116,11 +141,61 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     setTransactions((current) => current.filter((item) => item.id !== id));
   };
 
+  const addIncome = (income: IncomeInput) => {
+    const amount = Math.max(0, income.amount);
+    const safeTaxRate = Math.max(0, Math.min(100, income.taxRate));
+    const postTaxAmount =
+      income.taxType === "pre" ? amount * (1 - safeTaxRate / 100) : amount;
+
+    setIncomes((current) => [
+      {
+        id: Date.now(),
+        source: income.source.trim(),
+        amount,
+        taxType: income.taxType,
+        taxMethod: income.taxMethod,
+        taxState: income.taxState,
+        taxRate: safeTaxRate,
+        postTaxAmount,
+      },
+      ...current,
+    ]);
+  };
+
+  const updateIncome = (id: number, income: IncomeInput) => {
+    const amount = Math.max(0, income.amount);
+    const safeTaxRate = Math.max(0, Math.min(100, income.taxRate));
+    const postTaxAmount =
+      income.taxType === "pre" ? amount * (1 - safeTaxRate / 100) : amount;
+
+    setIncomes((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              source: income.source.trim(),
+              amount,
+              taxType: income.taxType,
+              taxMethod: income.taxMethod,
+              taxState: income.taxState,
+              taxRate: safeTaxRate,
+              postTaxAmount,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const deleteIncome = (id: number) => {
+    setIncomes((current) => current.filter((item) => item.id !== id));
+  };
+
   return (
     <BudgetContext.Provider
       value={{
         categories,
         transactions,
+        incomes,
         addCategory,
         updateCategoryLimit,
         updateCategoryName,
@@ -128,6 +203,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         addTransaction,
         updateTransaction,
         deleteTransaction,
+        addIncome,
+        updateIncome,
+        deleteIncome,
       }}
     >
       {children}
