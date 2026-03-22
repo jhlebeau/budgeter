@@ -19,7 +19,13 @@ const emptyForm: FormData = {
 };
 
 export default function TransactionsPage() {
-  const { categories, transactions, addTransaction, updateTransaction } = useBudget();
+  const {
+    categories,
+    transactions,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+  } = useBudget();
   const [form, setForm] = useState<FormData>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<FormData>(emptyForm);
@@ -239,6 +245,19 @@ export default function TransactionsPage() {
                     className="mt-2 rounded border px-3 py-1.5 hover:bg-zinc-50"
                   >
                     Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const shouldDelete = window.confirm(
+                        "Delete this transaction?",
+                      );
+                      if (!shouldDelete) return;
+                      deleteTransaction(transaction.id);
+                    }}
+                    className="mt-2 ml-2 rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                  >
+                    Delete
                   </button>
                 </>
               )}

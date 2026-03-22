@@ -10,10 +10,17 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 });
 
 export default function CategoriesPage() {
-  const { categories, addCategory, updateCategoryLimit } = useBudget();
+  const {
+    categories,
+    addCategory,
+    updateCategoryLimit,
+    updateCategoryName,
+    deleteCategory,
+  } = useBudget();
   const [newCategory, setNewCategory] = useState("");
   const [newLimit, setNewLimit] = useState("");
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
   const [editingLimit, setEditingLimit] = useState("");
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -26,14 +33,18 @@ export default function CategoriesPage() {
 
   const startLimitEdit = (name: string, monthlyLimit: number) => {
     setEditingCategory(name);
+    setEditingName(name);
     setEditingLimit(String(monthlyLimit));
   };
 
   const saveLimitEdit = () => {
     if (!editingCategory) return;
 
-    updateCategoryLimit(editingCategory, Number(editingLimit));
+    const didRename = updateCategoryName(editingCategory, editingName);
+    const finalName = didRename ? editingName.trim() : editingCategory;
+    updateCategoryLimit(finalName, Number(editingLimit));
     setEditingCategory(null);
+    setEditingName("");
     setEditingLimit("");
   };
 
@@ -88,6 +99,12 @@ export default function CategoriesPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {editingCategory === category.name ? (
                   <>
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(event) => setEditingName(event.target.value)}
+                      className="rounded border px-3 py-1.5"
+                    />
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
                         $
@@ -112,6 +129,7 @@ export default function CategoriesPage() {
                       type="button"
                       onClick={() => {
                         setEditingCategory(null);
+                        setEditingName("");
                         setEditingLimit("");
                       }}
                       className="rounded border px-3 py-1.5 hover:bg-zinc-50"
@@ -127,9 +145,28 @@ export default function CategoriesPage() {
                     }
                     className="rounded border px-3 py-1.5 hover:bg-zinc-50"
                   >
-                    Update Limit
+                    Update Category
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shouldDelete = window.confirm(
+                      `Delete category "${category.name}"? This will also delete its transactions.`,
+                    );
+                    if (!shouldDelete) return;
+
+                    deleteCategory(category.name);
+                    if (editingCategory === category.name) {
+                      setEditingCategory(null);
+                      setEditingName("");
+                      setEditingLimit("");
+                    }
+                  }}
+                  className="rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                >
+                  Delete
+                </button>
               </div>
             </li>
           ))}

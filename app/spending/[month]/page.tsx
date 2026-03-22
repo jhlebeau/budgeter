@@ -1,0 +1,139 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useMemo } from "react";
+import { useBudget } from "../../budget-context";
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+const monthFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
+});
+
+const formatMonthLabel = (monthKey: string) => {
+  const [yearText, monthText] = monthKey.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  return monthFormatter.format(new Date(year, month - 1, 1));
+};
+
+export default function SpendingMonthPage() {
+  const { month } = useParams<{ month: string }>();
+  const { categories, transactions } = useBudget();
+
+  const isValidMonth =
+    /^\d{4}-\d{2}$/.test(month) && Number(month.slice(5, 7)) >= 1 && Number(month.slice(5, 7)) <= 12;
+
+  const spendingByCategory = useMemo(() => {
+    if (!isValidMonth) return [];
+
+    return categories.map((category) => {
+      const currentSpend = transactions
+        .filter(
+          (transaction) =>
+            transaction.category === category.name &&
+            transaction.date.startsWith(month),
+        )
+        .reduce((total, transaction) => total + transaction.amount, 0);
+
+      return {
+        category: category.name,
+        currentSpend,
+        maxSpend: category.monthlyLimit,
+        spendLeft: category.monthlyLimit - currentSpend,
+      };
+    });
+  }, [categories, isValidMonth, month, transactions]);
+
+  const totalSpending = useMemo(
+    () =>
+      spendingByCategory.reduce(
+        (total, category) => total + category.currentSpend,
+        0,
+      ),
+    [spendingByCategory],
+  );
+  const totalBudgetedSpending = useMemo(
+    () =>
+      spendingByCategory.reduce((total, category) => total + category.maxSpend, 0),
+    [spendingByCategory],
+  );
+  const totalSpendLeft = totalBudgetedSpending - totalSpending;
+
+  return (
+    <main className="mx-auto w-full max-w-xl px-4 py-10">
+      <Link
+        href="/spending"
+        className="mb-5 inline-block text-sm text-zinc-600 hover:underline"
+      >
+        Back to Months
+      </Link>
+      <h1 className="mb-4 text-2xl font-semibold">
+        {isValidMonth ? formatMonthLabel(month) : "Invalid Month"}
+      </h1>
+
+      {isValidMonth ? (
+        <section className="rounded-lg border p-4">
+          <div className="mb-3 rounded border px-3 py-2 text-sm">
+            <details>
+              <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
+                <span>Total</span>
+                <span className="flex items-center gap-2">
+                  <span className={totalSpendLeft < 0 ? "text-red-600" : ""}>
+                    Spend left this month: {currencyFormatter.format(totalSpendLeft)}
+                  </span>
+                  <span className="text-zinc-500">▾</span>
+                </span>
+              </summary>
+              <div className="mt-2 space-y-1">
+                <p>Total spending: {currencyFormatter.format(totalSpending)}</p>
+                <p>
+                  Budgeted spending:{" "}
+                  {currencyFormatter.format(totalBudgetedSpending)}
+                </p>
+              </div>
+            </details>
+          </div>
+          <h2 className="mb-3 text-lg font-medium">Spending by Category</h2>
+          <ul className="space-y-2">
+            {spendingByCategory.map((category) => (
+              <li key={category.category} className="rounded border px-3 py-2 text-sm">
+                <details>
+                  <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
+                    <span>{category.category}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={category.spendLeft < 0 ? "text-red-600" : ""}>
+                        Spend left this month:{" "}
+                        {currencyFormatter.format(category.spendLeft)}
+                      </span>
+                      <span className="text-zinc-500">▾</span>
+                    </span>
+                  </summary>
+                  <div className="mt-2 space-y-1">
+                    <p>
+                      Current spending:{" "}
+                      {currencyFormatter.format(category.currentSpend)}
+                    </p>
+                    <p>Maximum spend: {currencyFormatter.format(category.maxSpend)}</p>
+                  </div>
+                </details>
+              </li>
+            ))}
+            {spendingByCategory.length === 0 ? (
+              <li className="text-sm text-zinc-500">No categories yet.</li>
+            ) : null}
+          </ul>
+        </section>
+      ) : (
+        <p className="text-sm text-red-600">
+          The month in the URL is not valid. Use YYYY-MM format.
+        </p>
+      )}
+    </main>
+  );
+}

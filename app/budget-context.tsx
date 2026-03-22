@@ -27,8 +27,11 @@ type BudgetContextValue = {
   transactions: Transaction[];
   addCategory: (name: string, monthlyLimit: number) => boolean;
   updateCategoryLimit: (name: string, monthlyLimit: number) => void;
+  updateCategoryName: (currentName: string, nextName: string) => boolean;
+  deleteCategory: (name: string) => void;
   addTransaction: (transaction: TransactionInput) => void;
   updateTransaction: (id: number, transaction: TransactionInput) => void;
+  deleteTransaction: (id: number) => void;
 };
 
 const BudgetContext = createContext<BudgetContextValue | null>(null);
@@ -60,6 +63,45 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const updateCategoryName = (currentName: string, nextName: string) => {
+    const trimmedName = nextName.trim();
+    if (!trimmedName) return false;
+
+    const exists = categories.some(
+      (category) =>
+        category.name.toLowerCase() === trimmedName.toLowerCase() &&
+        category.name !== currentName,
+    );
+    if (exists) return false;
+
+    setCategories((current) =>
+      current.map((category) =>
+        category.name === currentName
+          ? { ...category, name: trimmedName }
+          : category,
+      ),
+    );
+
+    setTransactions((current) =>
+      current.map((transaction) =>
+        transaction.category === currentName
+          ? { ...transaction, category: trimmedName }
+          : transaction,
+      ),
+    );
+
+    return true;
+  };
+
+  const deleteCategory = (name: string) => {
+    setCategories((current) =>
+      current.filter((category) => category.name !== name),
+    );
+    setTransactions((current) =>
+      current.filter((transaction) => transaction.category !== name),
+    );
+  };
+
   const addTransaction = (transaction: TransactionInput) => {
     setTransactions((current) => [{ id: Date.now(), ...transaction }, ...current]);
   };
@@ -70,6 +112,10 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const deleteTransaction = (id: number) => {
+    setTransactions((current) => current.filter((item) => item.id !== id));
+  };
+
   return (
     <BudgetContext.Provider
       value={{
@@ -77,8 +123,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         transactions,
         addCategory,
         updateCategoryLimit,
+        updateCategoryName,
+        deleteCategory,
         addTransaction,
         updateTransaction,
+        deleteTransaction,
       }}
     >
       {children}
