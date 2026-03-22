@@ -4,15 +4,37 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useBudget } from "../budget-context";
 
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
 export default function CategoriesPage() {
-  const { categories, addCategory } = useBudget();
+  const { categories, addCategory, updateCategoryLimit } = useBudget();
   const [newCategory, setNewCategory] = useState("");
+  const [newLimit, setNewLimit] = useState("");
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingLimit, setEditingLimit] = useState("");
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (addCategory(newCategory)) {
+    if (addCategory(newCategory, Number(newLimit))) {
       setNewCategory("");
+      setNewLimit("");
     }
+  };
+
+  const startLimitEdit = (name: string, monthlyLimit: number) => {
+    setEditingCategory(name);
+    setEditingLimit(String(monthlyLimit));
+  };
+
+  const saveLimitEdit = () => {
+    if (!editingCategory) return;
+
+    updateCategoryLimit(editingCategory, Number(editingLimit));
+    setEditingCategory(null);
+    setEditingLimit("");
   };
 
   return (
@@ -31,6 +53,21 @@ export default function CategoriesPage() {
           className="w-full rounded border px-3 py-2"
           required
         />
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+            $
+          </span>
+          <input
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="Monthly spending limit"
+            value={newLimit}
+            onChange={(event) => setNewLimit(event.target.value)}
+            className="w-full rounded border py-2 pr-3 pl-7"
+            required
+          />
+        </div>
         <button
           type="submit"
           className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
@@ -43,8 +80,57 @@ export default function CategoriesPage() {
         <h2 className="mb-3 text-lg font-medium">Current Categories</h2>
         <ul className="space-y-2">
           {categories.map((category) => (
-            <li key={category} className="rounded border px-3 py-2 text-sm">
-              {category}
+            <li key={category.name} className="rounded border px-3 py-2 text-sm">
+              <p className="mb-2 font-medium">{category.name}</p>
+              <p className="mb-2 text-zinc-600">
+                Current limit: {currencyFormatter.format(category.monthlyLimit)}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {editingCategory === category.name ? (
+                  <>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={editingLimit}
+                        onChange={(event) => setEditingLimit(event.target.value)}
+                        className="rounded py-1.5 pr-3 pl-7 border"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={saveLimitEdit}
+                      className="rounded border px-3 py-1.5 hover:bg-zinc-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCategory(null);
+                        setEditingLimit("");
+                      }}
+                      className="rounded border px-3 py-1.5 hover:bg-zinc-50"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      startLimitEdit(category.name, category.monthlyLimit)
+                    }
+                    className="rounded border px-3 py-1.5 hover:bg-zinc-50"
+                  >
+                    Update Limit
+                  </button>
+                )}
+              </div>
             </li>
           ))}
           {categories.length === 0 ? (

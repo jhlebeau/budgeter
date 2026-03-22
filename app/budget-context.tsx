@@ -2,6 +2,11 @@
 
 import { createContext, ReactNode, useContext, useState } from "react";
 
+export type Category = {
+  name: string;
+  monthlyLimit: number;
+};
+
 export type Transaction = {
   id: number;
   amount: number;
@@ -18,9 +23,10 @@ export type TransactionInput = {
 };
 
 type BudgetContextValue = {
-  categories: string[];
+  categories: Category[];
   transactions: Transaction[];
-  addCategory: (value: string) => boolean;
+  addCategory: (name: string, monthlyLimit: number) => boolean;
+  updateCategoryLimit: (name: string, monthlyLimit: number) => void;
   addTransaction: (transaction: TransactionInput) => void;
   updateTransaction: (id: number, transaction: TransactionInput) => void;
 };
@@ -28,20 +34,30 @@ type BudgetContextValue = {
 const BudgetContext = createContext<BudgetContextValue | null>(null);
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  const addCategory = (value: string) => {
-    const next = value.trim();
-    if (!next) return false;
+  const addCategory = (name: string, monthlyLimit: number) => {
+    const nextName = name.trim();
+    if (!nextName || monthlyLimit <= 0) return false;
 
     const exists = categories.some(
-      (category) => category.toLowerCase() === next.toLowerCase(),
+      (category) => category.name.toLowerCase() === nextName.toLowerCase(),
     );
     if (exists) return false;
 
-    setCategories((current) => [...current, next]);
+    setCategories((current) => [...current, { name: nextName, monthlyLimit }]);
     return true;
+  };
+
+  const updateCategoryLimit = (name: string, monthlyLimit: number) => {
+    if (monthlyLimit <= 0) return;
+
+    setCategories((current) =>
+      current.map((category) =>
+        category.name === name ? { ...category, monthlyLimit } : category,
+      ),
+    );
   };
 
   const addTransaction = (transaction: TransactionInput) => {
@@ -60,6 +76,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         categories,
         transactions,
         addCategory,
+        updateCategoryLimit,
         addTransaction,
         updateTransaction,
       }}

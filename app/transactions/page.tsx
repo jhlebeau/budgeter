@@ -72,17 +72,6 @@ export default function TransactionsPage() {
       <h1 className="mb-4 text-2xl font-semibold">Record Transaction</h1>
 
       <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">
-        <input
-          type="number"
-          step="0.01"
-          placeholder="Amount"
-          value={form.amount}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, amount: event.target.value }))
-          }
-          className="w-full rounded border px-3 py-2"
-          required
-        />
         <select
           value={form.category}
           onChange={(event) =>
@@ -98,11 +87,27 @@ export default function TransactionsPage() {
               : "Select a category"}
           </option>
           {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
+            <option key={category.name} value={category.name}>
+              {category.name}
             </option>
           ))}
         </select>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+            $
+          </span>
+          <input
+            type="number"
+            step="0.01"
+            placeholder="Amount"
+            value={form.amount}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, amount: event.target.value }))
+            }
+            className="w-full rounded border py-2 pr-3 pl-7"
+            required
+          />
+        </div>
         <input
           type="date"
           value={form.date}
@@ -113,7 +118,7 @@ export default function TransactionsPage() {
           required
         />
         <textarea
-          placeholder="Note"
+          placeholder="Description"
           value={form.note}
           onChange={(event) =>
             setForm((current) => ({ ...current, note: event.target.value }))
@@ -140,19 +145,6 @@ export default function TransactionsPage() {
             >
               {editingId === transaction.id ? (
                 <div className="space-y-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={editForm.amount}
-                    onChange={(event) =>
-                      setEditForm((current) => ({
-                        ...current,
-                        amount: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded border px-3 py-2"
-                    required
-                  />
                   <select
                     value={editForm.category}
                     onChange={(event) =>
@@ -166,11 +158,29 @@ export default function TransactionsPage() {
                   >
                     <option value="">Select a category</option>
                     {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
+                      <option key={category.name} value={category.name}>
+                        {category.name}
                       </option>
                     ))}
                   </select>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editForm.amount}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          amount: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded border py-2 pr-3 pl-7"
+                      required
+                    />
+                  </div>
                   <input
                     type="date"
                     value={editForm.date}
@@ -184,6 +194,7 @@ export default function TransactionsPage() {
                     required
                   />
                   <textarea
+                    placeholder="Description"
                     value={editForm.note}
                     onChange={(event) =>
                       setEditForm((current) => ({
