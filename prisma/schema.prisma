@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model IncomeSource {
+  id        String   @id @default(uuid())
+  name      String
+  amount    Float
+  frequency Frequency
+  isPreTax  Boolean
+
+  taxRate   Float?
+  taxState  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SpendingCategory {
+  id          String   @id @default(uuid())
+  name        String
+
+  limitType   LimitType
+  limitValue  Float
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactions Transaction[]
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+
+  amount       Float
+  date         DateTime
+  description  String?
+
+  categoryId   String
+  category     SpendingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum Frequency {
+  MONTHLY
+  ANNUAL
+}
+
+enum LimitType {
+  AMOUNT
+  PERCENT
+}
