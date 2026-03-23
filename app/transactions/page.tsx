@@ -6,14 +6,14 @@ import { useBudget } from "../budget-context";
 
 type FormData = {
   amount: string;
-  category: string;
+  categoryId: string;
   date: string;
   note: string;
 };
 
 const emptyForm: FormData = {
   amount: "",
-  category: "",
+  categoryId: "",
   date: "",
   note: "",
 };
@@ -27,15 +27,15 @@ export default function TransactionsPage() {
     deleteTransaction,
   } = useBudget();
   const [form, setForm] = useState<FormData>(emptyForm);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormData>(emptyForm);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    addTransaction({
+    await addTransaction({
       amount: Number(form.amount),
-      category: form.category,
+      categoryId: form.categoryId,
       date: form.date,
       note: form.note.trim(),
     });
@@ -43,25 +43,25 @@ export default function TransactionsPage() {
     setForm(emptyForm);
   };
 
-  const startEditing = (id: number) => {
+  const startEditing = (id: string) => {
     const transaction = transactions.find((item) => item.id === id);
     if (!transaction) return;
 
     setEditingId(id);
     setEditForm({
       amount: String(transaction.amount),
-      category: transaction.category,
+      categoryId: transaction.categoryId,
       date: transaction.date,
       note: transaction.note,
     });
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editingId === null) return;
 
-    updateTransaction(editingId, {
+    await updateTransaction(editingId, {
       amount: Number(editForm.amount),
-      category: editForm.category,
+      categoryId: editForm.categoryId,
       date: editForm.date,
       note: editForm.note.trim(),
     });
@@ -79,9 +79,9 @@ export default function TransactionsPage() {
 
       <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">
         <select
-          value={form.category}
+          value={form.categoryId}
           onChange={(event) =>
-            setForm((current) => ({ ...current, category: event.target.value }))
+            setForm((current) => ({ ...current, categoryId: event.target.value }))
           }
           className="w-full rounded border px-3 py-2"
           required
@@ -89,11 +89,11 @@ export default function TransactionsPage() {
         >
           <option value="">
             {categories.length === 0
-              ? "Create a category in settings first"
+              ? "Create a category in set spending first"
               : "Select a category"}
           </option>
           {categories.map((category) => (
-            <option key={category.name} value={category.name}>
+            <option key={category.id} value={category.id}>
               {category.name}
             </option>
           ))}
@@ -152,11 +152,11 @@ export default function TransactionsPage() {
               {editingId === transaction.id ? (
                 <div className="space-y-2">
                   <select
-                    value={editForm.category}
+                    value={editForm.categoryId}
                     onChange={(event) =>
                       setEditForm((current) => ({
                         ...current,
-                        category: event.target.value,
+                        categoryId: event.target.value,
                       }))
                     }
                     className="w-full rounded border px-3 py-2"
@@ -164,7 +164,7 @@ export default function TransactionsPage() {
                   >
                     <option value="">Select a category</option>
                     {categories.map((category) => (
-                      <option key={category.name} value={category.name}>
+                      <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
                     ))}
@@ -216,7 +216,7 @@ export default function TransactionsPage() {
                       type="button"
                       onClick={saveEdit}
                       className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
-                      disabled={!editForm.category}
+                      disabled={!editForm.categoryId}
                     >
                       Save
                     </button>
@@ -235,7 +235,7 @@ export default function TransactionsPage() {
               ) : (
                 <>
                   <p className="font-medium">
-                    ${transaction.amount.toFixed(2)} - {transaction.category}
+                    ${transaction.amount.toFixed(2)} - {transaction.categoryName}
                   </p>
                   <p className="text-zinc-600">{transaction.date}</p>
                   {transaction.note ? <p>{transaction.note}</p> : null}
@@ -248,12 +248,12 @@ export default function TransactionsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const shouldDelete = window.confirm(
                         "Delete this transaction?",
                       );
                       if (!shouldDelete) return;
-                      deleteTransaction(transaction.id);
+                      await deleteTransaction(transaction.id);
                     }}
                     className="mt-2 ml-2 rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
                   >

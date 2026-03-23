@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useBudget } from "../budget-context";
+import { Category, useBudget } from "../budget-context";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -44,32 +44,28 @@ export default function CategoriesPage() {
 
   const isOverBudget = totalBudgetedAmount > monthlyIncome;
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (addCategory(newCategory, newLimitType, Number(newLimit))) {
+    if (await addCategory(newCategory, newLimitType, Number(newLimit))) {
       setNewCategory("");
       setNewLimitType("amount");
       setNewLimit("");
     }
   };
 
-  const startLimitEdit = (
-    name: string,
-    limitType: "amount" | "percent",
-    limitValue: number,
-  ) => {
-    setEditingCategory(name);
-    setEditingName(name);
-    setEditingLimitType(limitType);
-    setEditingLimit(String(limitValue));
+  const startLimitEdit = (category: Category) => {
+    setEditingCategory(category.id);
+    setEditingName(category.name);
+    setEditingLimitType(category.limitType);
+    setEditingLimit(String(category.limitValue));
   };
 
-  const saveLimitEdit = () => {
+  const saveLimitEdit = async () => {
     if (!editingCategory) return;
 
-    const didRename = updateCategoryName(editingCategory, editingName);
-    const finalName = didRename ? editingName.trim() : editingCategory;
-    updateCategoryLimit(finalName, editingLimitType, Number(editingLimit));
+    const didRename = await updateCategoryName(editingCategory, editingName);
+    if (!didRename) return;
+    await updateCategoryLimit(editingCategory, editingLimitType, Number(editingLimit));
     setEditingCategory(null);
     setEditingName("");
     setEditingLimitType("amount");
@@ -79,8 +75,8 @@ export default function CategoriesPage() {
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
       <div className="mb-5 flex gap-4 text-sm">
-        <Link href="/settings" className="text-zinc-600 hover:underline">
-          Back to Settings
+        <Link href="/setup" className="text-zinc-600 hover:underline">
+          Back to Setup
         </Link>
         <Link href="/" className="text-zinc-600 hover:underline">
           Back to Home
@@ -164,7 +160,7 @@ export default function CategoriesPage() {
                     )})`}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                {editingCategory === category.name ? (
+                {editingCategory === category.id ? (
                   <>
                     <input
                       type="text"
@@ -224,13 +220,7 @@ export default function CategoriesPage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      startLimitEdit(
-                        category.name,
-                        category.limitType,
-                        category.limitValue,
-                      )
-                    }
+                    onClick={() => startLimitEdit(category)}
                     className="rounded border px-3 py-1.5 hover:bg-zinc-50"
                   >
                     Update Category
@@ -238,14 +228,14 @@ export default function CategoriesPage() {
                 )}
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     const shouldDelete = window.confirm(
                       `Delete category "${category.name}"? This will also delete its transactions.`,
                     );
                     if (!shouldDelete) return;
 
-                    deleteCategory(category.name);
-                    if (editingCategory === category.name) {
+                    await deleteCategory(category.id);
+                    if (editingCategory === category.id) {
                       setEditingCategory(null);
                       setEditingName("");
                       setEditingLimitType("amount");

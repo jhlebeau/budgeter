@@ -41,7 +41,7 @@ export default function SpendingMonthPage() {
       const currentSpend = transactions
         .filter(
           (transaction) =>
-            transaction.category === category.name &&
+            transaction.categoryId === category.id &&
             transaction.date.startsWith(month),
         )
         .reduce((total, transaction) => total + transaction.amount, 0);

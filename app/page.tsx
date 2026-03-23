@@ -7,10 +7,10 @@ export default function Home() {
       <p className="mb-6 text-zinc-600">Choose what you want to do:</p>
       <div className="flex flex-col gap-3">
         <Link
-          href="/settings"
+          href="/setup"
           className="rounded border px-4 py-3 text-center font-medium hover:bg-zinc-50"
         >
-          Settings
+          Set Income, Spending, and Savings
         </Link>
         <Link
           href="/transactions"
@@ -25,6 +25,10 @@ export default function Home() {
           View Spending
         </Link>
       </div>
+      <Link href="/settings" className="mt-5 inline-block text-sm text-zinc-600 hover:underline">
+        Settings
+      </Link>
     </main>
   );
 }
+

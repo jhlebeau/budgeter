@@ -114,7 +114,7 @@ const toEditForm = (income: Income): IncomeForm => ({
 export default function IncomePage() {
   const { incomes, addIncome, updateIncome, deleteIncome } = useBudget();
   const [form, setForm] = useState<IncomeForm>(emptyForm);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<IncomeForm>(emptyForm);
 
   const getEffectiveTaxRate = (annualAmount: number, values: IncomeForm) => {
@@ -146,10 +146,10 @@ export default function IncomePage() {
       ? monthlyAmount * (1 - effectiveTaxRate / 100)
       : monthlyAmount;
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    addIncome({
+    await addIncome({
       source: form.source,
       amount: monthlyAmount,
       taxType: form.taxType,
@@ -166,7 +166,7 @@ export default function IncomePage() {
     setEditForm(toEditForm(income));
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editingId === null) return;
 
     const monthlyEditAmount = Number(editForm.amount) || 0;
@@ -179,7 +179,7 @@ export default function IncomePage() {
           : Number(editForm.taxRate) || 0
         : 0;
 
-    updateIncome(editingId, {
+    await updateIncome(editingId, {
       source: editForm.source,
       amount: monthlyEditAmount,
       taxType: editForm.taxType,
@@ -198,8 +198,8 @@ export default function IncomePage() {
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
       <div className="mb-5 flex gap-4 text-sm">
-        <Link href="/settings" className="text-zinc-600 hover:underline">
-          Back to Settings
+        <Link href="/setup" className="text-zinc-600 hover:underline">
+          Back to Setup
         </Link>
         <Link href="/" className="text-zinc-600 hover:underline">
           Back to Home
@@ -523,12 +523,12 @@ export default function IncomePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const shouldDelete = window.confirm(
                         "Delete this income source?",
                       );
                       if (!shouldDelete) return;
-                      deleteIncome(income.id);
+                      await deleteIncome(income.id);
                     }}
                     className="mt-2 ml-2 rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
                   >
