@@ -47,6 +47,7 @@ export type IncomeInput = {
 
 type BudgetContextValue = {
   categories: Category[];
+  savingCategories: Category[];
   transactions: Transaction[];
   incomes: Income[];
   addCategory: (
@@ -61,6 +62,18 @@ type BudgetContextValue = {
   ) => Promise<void>;
   updateCategoryName: (id: string, nextName: string) => Promise<boolean>;
   deleteCategory: (id: string) => Promise<void>;
+  addSavingCategory: (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => Promise<boolean>;
+  updateSavingCategoryLimit: (
+    id: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => Promise<void>;
+  updateSavingCategoryName: (id: string, nextName: string) => Promise<boolean>;
+  deleteSavingCategory: (id: string) => Promise<void>;
   addTransaction: (transaction: TransactionInput) => Promise<void>;
   updateTransaction: (id: string, transaction: TransactionInput) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -83,6 +96,13 @@ type ApiIncome = {
 };
 
 type ApiCategory = {
+  id: string;
+  name: string;
+  limitType: "AMOUNT" | "PERCENT";
+  limitValue: number;
+};
+
+type ApiSavingCategory = {
   id: string;
   name: string;
   limitType: "AMOUNT" | "PERCENT";
@@ -136,6 +156,7 @@ const toTransaction = (transaction: ApiTransaction): Transaction => ({
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [savingCategories, setSavingCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
 
@@ -143,9 +164,15 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     let isActive = true;
 
     const load = async () => {
-      const [categoriesResponse, transactionsResponse, incomesResponse] =
+      const [
+        categoriesResponse,
+        savingCategoriesResponse,
+        transactionsResponse,
+        incomesResponse,
+      ] =
         await Promise.all([
           fetch("/api/spending-categories", { cache: "no-store" }),
+          fetch("/api/saving-categories", { cache: "no-store" }),
           fetch("/api/transactions", { cache: "no-store" }),
           fetch("/api/income-sources", { cache: "no-store" }),
         ]);
@@ -153,20 +180,24 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       if (
         !isActive ||
         !categoriesResponse.ok ||
+        !savingCategoriesResponse.ok ||
         !transactionsResponse.ok ||
         !incomesResponse.ok
       ) {
         return;
       }
 
-      const [categoriesData, transactionsData, incomesData] = await Promise.all([
+      const [categoriesData, savingCategoriesData, transactionsData, incomesData] =
+        await Promise.all([
         categoriesResponse.json() as Promise<ApiCategory[]>,
+        savingCategoriesResponse.json() as Promise<ApiSavingCategory[]>,
         transactionsResponse.json() as Promise<ApiTransaction[]>,
         incomesResponse.json() as Promise<ApiIncome[]>,
       ]);
 
       if (!isActive) return;
       setCategories(categoriesData.map(toCategory));
+      setSavingCategories(savingCategoriesData.map(toCategory));
       setTransactions(transactionsData.map(toTransaction));
       setIncomes(incomesData.map(toIncome));
     };
@@ -263,6 +294,87 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     setCategories((current) => current.filter((category) => category.id !== id));
     setTransactions((current) =>
       current.filter((transaction) => transaction.categoryId !== id),
+    );
+  };
+
+  const addSavingCategory = async (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => {
+    const nextName = name.trim();
+    if (!nextName || limitValue <= 0) return false;
+
+    const exists = savingCategories.some(
+      (category) => category.name.toLowerCase() === nextName.toLowerCase(),
+    );
+    if (exists) return false;
+
+    const response = await fetch("/api/saving-categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: nextName,
+        limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
+        limitValue,
+      }),
+    });
+    if (!response.ok) return false;
+
+    const created = (await response.json()) as ApiSavingCategory;
+    setSavingCategories((current) => [toCategory(created), ...current]);
+    return true;
+  };
+
+  const updateSavingCategoryLimit = async (
+    id: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => {
+    if (limitValue <= 0) return;
+
+    const response = await fetch(`/api/saving-categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
+        limitValue,
+      }),
+    });
+    if (!response.ok) return;
+
+    const updated = (await response.json()) as ApiSavingCategory;
+    setSavingCategories((current) =>
+      current.map((category) => (category.id === id ? toCategory(updated) : category)),
+    );
+  };
+
+  const updateSavingCategoryName = async (id: string, nextName: string) => {
+    const trimmedName = nextName.trim();
+    if (!trimmedName) return false;
+
+    const response = await fetch(`/api/saving-categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmedName }),
+    });
+    if (!response.ok) return false;
+
+    const updated = (await response.json()) as ApiSavingCategory;
+    setSavingCategories((current) =>
+      current.map((category) => (category.id === id ? toCategory(updated) : category)),
+    );
+    return true;
+  };
+
+  const deleteSavingCategory = async (id: string) => {
+    const response = await fetch(`/api/saving-categories/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) return;
+
+    setSavingCategories((current) =>
+      current.filter((category) => category.id !== id),
     );
   };
 
@@ -395,6 +507,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     if (!response.ok) return;
 
     setCategories([]);
+    setSavingCategories([]);
     setTransactions([]);
     setIncomes([]);
   };
@@ -403,12 +516,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     <BudgetContext.Provider
       value={{
         categories,
+        savingCategories,
         transactions,
         incomes,
         addCategory,
         updateCategoryLimit,
         updateCategoryName,
         deleteCategory,
+        addSavingCategory,
+        updateSavingCategoryLimit,
+        updateSavingCategoryName,
+        deleteSavingCategory,
         addTransaction,
         updateTransaction,
         deleteTransaction,

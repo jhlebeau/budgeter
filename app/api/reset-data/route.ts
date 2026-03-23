@@ -5,6 +5,7 @@ export async function DELETE() {
   try {
     await prisma.transaction.deleteMany();
     await prisma.spendingCategory.deleteMany();
+    await prisma.savingCategory.deleteMany();
     await prisma.incomeSource.deleteMany();
 
     return new NextResponse(null, { status: 204 });
@@ -15,4 +16,3 @@ export async function DELETE() {
     );
   }
 }
-

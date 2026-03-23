@@ -24,7 +24,7 @@ const formatMonthLabel = (monthKey: string) => {
 
 export default function SpendingMonthPage() {
   const { month } = useParams<{ month: string }>();
-  const { categories, transactions, incomes } = useBudget();
+  const { categories, savingCategories, transactions, incomes } = useBudget();
 
   const monthlyIncome = useMemo(
     () => incomes.reduce((total, income) => total + income.postTaxAmount, 0),
@@ -74,7 +74,35 @@ export default function SpendingMonthPage() {
       spendingByCategory.reduce((total, category) => total + category.maxSpend, 0),
     [spendingByCategory],
   );
+
+  const totalBudgetedSavings = useMemo(
+    () =>
+      savingCategories.reduce(
+        (total, category) =>
+          total +
+          (category.limitType === "amount"
+            ? category.limitValue
+            : (monthlyIncome * category.limitValue) / 100),
+        0,
+      ),
+    [monthlyIncome, savingCategories],
+  );
+
+  const savingsByCategory = useMemo(
+    () =>
+      savingCategories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        amount:
+          category.limitType === "amount"
+            ? category.limitValue
+            : (monthlyIncome * category.limitValue) / 100,
+      })),
+    [monthlyIncome, savingCategories],
+  );
+
   const totalSpendLeft = totalBudgetedSpending - totalSpending;
+  const additionalIncome = monthlyIncome - totalBudgetedSavings - totalSpending;
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
@@ -90,25 +118,17 @@ export default function SpendingMonthPage() {
 
       {isValidMonth ? (
         <section className="rounded-lg border p-4">
+          <h2 className="mb-3 text-lg font-medium">Summary</h2>
           <div className="mb-3 rounded border px-3 py-2 text-sm">
-            <details>
-              <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
-                <span>Total</span>
-                <span className="flex items-center gap-2">
-                  <span className={totalSpendLeft < 0 ? "text-red-600" : ""}>
-                    Spend left this month: {currencyFormatter.format(totalSpendLeft)}
-                  </span>
-                  <span className="text-zinc-500">▾</span>
-                </span>
-              </summary>
-              <div className="mt-2 space-y-1">
-                <p>Total spending: {currencyFormatter.format(totalSpending)}</p>
-                <p>
-                  Budgeted spending:{" "}
-                  {currencyFormatter.format(totalBudgetedSpending)}
-                </p>
-              </div>
-            </details>
+            <p>Income This Month: {currencyFormatter.format(monthlyIncome)}</p>
+            <p>Total Spent: {currencyFormatter.format(totalSpending)}</p>
+            <p className={totalSpendLeft < 0 ? "text-red-600" : ""}>
+              Spend Left This Month: {currencyFormatter.format(totalSpendLeft)}
+            </p>
+            <p>Budgeted Savings: {currencyFormatter.format(totalBudgetedSavings)}</p>
+            <p className={additionalIncome < 0 ? "text-red-600" : ""}>
+              Leftover Income: {currencyFormatter.format(additionalIncome)}
+            </p>
           </div>
           <h2 className="mb-3 text-lg font-medium">Spending by Category</h2>
           <ul className="space-y-2">
@@ -137,6 +157,24 @@ export default function SpendingMonthPage() {
             ))}
             {spendingByCategory.length === 0 ? (
               <li className="text-sm text-zinc-500">No categories yet.</li>
+            ) : null}
+          </ul>
+
+          <h2 className="mt-6 mb-3 text-lg font-medium">Savings By Category</h2>
+          <ul className="space-y-2">
+            {savingsByCategory.map((category) => (
+              <li
+                key={category.id}
+                className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+              >
+                <span>{category.name}</span>
+                <span className="font-medium">
+                  {currencyFormatter.format(category.amount)}
+                </span>
+              </li>
+            ))}
+            {savingsByCategory.length === 0 ? (
+              <li className="text-sm text-zinc-500">No savings categories yet.</li>
             ) : null}
           </ul>
         </section>

@@ -20,8 +20,13 @@ export default function SetupPage() {
         >
           Create Spending Categories
         </Link>
+        <Link
+          href="/savings-categories"
+          className="rounded border px-4 py-3 text-center font-medium hover:bg-zinc-50"
+        >
+          Create Savings Categories
+        </Link>
       </div>
     </main>
   );
 }
-
