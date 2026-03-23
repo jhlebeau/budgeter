@@ -12,29 +12,56 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 export default function CategoriesPage() {
   const {
     categories,
+    incomes,
     addCategory,
     updateCategoryLimit,
     updateCategoryName,
     deleteCategory,
   } = useBudget();
   const [newCategory, setNewCategory] = useState("");
+  const [newLimitType, setNewLimitType] = useState<"amount" | "percent">("amount");
   const [newLimit, setNewLimit] = useState("");
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [editingLimitType, setEditingLimitType] = useState<"amount" | "percent">("amount");
   const [editingLimit, setEditingLimit] = useState("");
+
+  const monthlyIncome = incomes.reduce(
+    (total, income) => total + income.postTaxAmount,
+    0,
+  );
+
+  const getCategoryBudgetAmount = (
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => (limitType === "amount" ? limitValue : (monthlyIncome * limitValue) / 100);
+
+  const totalBudgetedAmount = categories.reduce(
+    (total, category) =>
+      total + getCategoryBudgetAmount(category.limitType, category.limitValue),
+    0,
+  );
+
+  const isOverBudget = totalBudgetedAmount > monthlyIncome;
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (addCategory(newCategory, Number(newLimit))) {
+    if (addCategory(newCategory, newLimitType, Number(newLimit))) {
       setNewCategory("");
+      setNewLimitType("amount");
       setNewLimit("");
     }
   };
 
-  const startLimitEdit = (name: string, monthlyLimit: number) => {
+  const startLimitEdit = (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => {
     setEditingCategory(name);
     setEditingName(name);
-    setEditingLimit(String(monthlyLimit));
+    setEditingLimitType(limitType);
+    setEditingLimit(String(limitValue));
   };
 
   const saveLimitEdit = () => {
@@ -42,17 +69,23 @@ export default function CategoriesPage() {
 
     const didRename = updateCategoryName(editingCategory, editingName);
     const finalName = didRename ? editingName.trim() : editingCategory;
-    updateCategoryLimit(finalName, Number(editingLimit));
+    updateCategoryLimit(finalName, editingLimitType, Number(editingLimit));
     setEditingCategory(null);
     setEditingName("");
+    setEditingLimitType("amount");
     setEditingLimit("");
   };
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
-      <Link href="/" className="mb-5 inline-block text-sm text-zinc-600 hover:underline">
-        Back to Home
-      </Link>
+      <div className="mb-5 flex gap-4 text-sm">
+        <Link href="/settings" className="text-zinc-600 hover:underline">
+          Back to Settings
+        </Link>
+        <Link href="/" className="text-zinc-600 hover:underline">
+          Back to Home
+        </Link>
+      </div>
       <h1 className="mb-4 text-2xl font-semibold">Create Spending Categories</h1>
 
       <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">
@@ -64,18 +97,36 @@ export default function CategoriesPage() {
           className="w-full rounded border px-3 py-2"
           required
         />
+        <select
+          value={newLimitType}
+          onChange={(event) =>
+            setNewLimitType(event.target.value as "amount" | "percent")
+          }
+          className="w-full rounded border px-3 py-2"
+        >
+          <option value="amount">Dollar amount</option>
+          <option value="percent">Percent of monthly income</option>
+        </select>
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-            $
-          </span>
+          {newLimitType === "amount" ? (
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+              $
+            </span>
+          ) : null}
           <input
             type="number"
             step="0.01"
             min="0.01"
-            placeholder="Monthly spending limit"
+            placeholder={
+              newLimitType === "amount"
+                ? "Monthly spending limit"
+                : "Percent of monthly income"
+            }
             value={newLimit}
             onChange={(event) => setNewLimit(event.target.value)}
-            className="w-full rounded border py-2 pr-3 pl-7"
+            className={`w-full rounded border py-2 pr-3 ${
+              newLimitType === "amount" ? "pl-7" : "pl-3"
+            }`}
             required
           />
         </div>
@@ -85,6 +136,17 @@ export default function CategoriesPage() {
         >
           Add Category
         </button>
+        <p className="text-sm text-zinc-600">
+          Monthly income: {currencyFormatter.format(monthlyIncome)}
+        </p>
+        <p className="text-sm text-zinc-600">
+          Total budgeted: {currencyFormatter.format(totalBudgetedAmount)}
+        </p>
+        {isOverBudget ? (
+          <p className="text-sm font-medium text-red-600">
+            Warning: Total budget exceeds monthly income.
+          </p>
+        ) : null}
       </form>
 
       <section className="mt-6">
@@ -94,7 +156,12 @@ export default function CategoriesPage() {
             <li key={category.name} className="rounded border px-3 py-2 text-sm">
               <p className="mb-2 font-medium">{category.name}</p>
               <p className="mb-2 text-zinc-600">
-                Current limit: {currencyFormatter.format(category.monthlyLimit)}
+                Current limit:{" "}
+                {category.limitType === "amount"
+                  ? currencyFormatter.format(category.limitValue)
+                  : `${category.limitValue.toFixed(2)}% (${currencyFormatter.format(
+                      getCategoryBudgetAmount(category.limitType, category.limitValue),
+                    )})`}
               </p>
               <div className="flex flex-wrap items-center gap-2">
                 {editingCategory === category.name ? (
@@ -105,17 +172,33 @@ export default function CategoriesPage() {
                       onChange={(event) => setEditingName(event.target.value)}
                       className="rounded border px-3 py-1.5"
                     />
+                    <select
+                      value={editingLimitType}
+                      onChange={(event) =>
+                        setEditingLimitType(
+                          event.target.value as "amount" | "percent",
+                        )
+                      }
+                      className="rounded border px-3 py-1.5"
+                    >
+                      <option value="amount">Dollar amount</option>
+                      <option value="percent">Percent of monthly income</option>
+                    </select>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
-                        $
-                      </span>
+                      {editingLimitType === "amount" ? (
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                          $
+                        </span>
+                      ) : null}
                       <input
                         type="number"
                         step="0.01"
                         min="0.01"
                         value={editingLimit}
                         onChange={(event) => setEditingLimit(event.target.value)}
-                        className="rounded py-1.5 pr-3 pl-7 border"
+                        className={`rounded border py-1.5 pr-3 ${
+                          editingLimitType === "amount" ? "pl-7" : "pl-3"
+                        }`}
                       />
                     </div>
                     <button
@@ -130,6 +213,7 @@ export default function CategoriesPage() {
                       onClick={() => {
                         setEditingCategory(null);
                         setEditingName("");
+                        setEditingLimitType("amount");
                         setEditingLimit("");
                       }}
                       className="rounded border px-3 py-1.5 hover:bg-zinc-50"
@@ -141,7 +225,11 @@ export default function CategoriesPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      startLimitEdit(category.name, category.monthlyLimit)
+                      startLimitEdit(
+                        category.name,
+                        category.limitType,
+                        category.limitValue,
+                      )
                     }
                     className="rounded border px-3 py-1.5 hover:bg-zinc-50"
                   >
@@ -160,6 +248,7 @@ export default function CategoriesPage() {
                     if (editingCategory === category.name) {
                       setEditingCategory(null);
                       setEditingName("");
+                      setEditingLimitType("amount");
                       setEditingLimit("");
                     }
                   }}

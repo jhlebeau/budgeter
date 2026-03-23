@@ -89,7 +89,7 @@ export default function TransactionsPage() {
         >
           <option value="">
             {categories.length === 0
-              ? "Create a category first"
+              ? "Create a category in settings first"
               : "Select a category"}
           </option>
           {categories.map((category) => (

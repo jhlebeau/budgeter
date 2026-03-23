@@ -197,9 +197,14 @@ export default function IncomePage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
-      <Link href="/" className="mb-5 inline-block text-sm text-zinc-600 hover:underline">
-        Back to Home
-      </Link>
+      <div className="mb-5 flex gap-4 text-sm">
+        <Link href="/settings" className="text-zinc-600 hover:underline">
+          Back to Settings
+        </Link>
+        <Link href="/" className="text-zinc-600 hover:underline">
+          Back to Home
+        </Link>
+      </div>
       <h1 className="mb-4 text-2xl font-semibold">Add Income</h1>
 
       <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">

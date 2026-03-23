@@ -4,7 +4,8 @@ import { createContext, ReactNode, useContext, useState } from "react";
 
 export type Category = {
   name: string;
-  monthlyLimit: number;
+  limitType: "amount" | "percent";
+  limitValue: number;
 };
 
 export type Transaction = {
@@ -46,8 +47,16 @@ type BudgetContextValue = {
   categories: Category[];
   transactions: Transaction[];
   incomes: Income[];
-  addCategory: (name: string, monthlyLimit: number) => boolean;
-  updateCategoryLimit: (name: string, monthlyLimit: number) => void;
+  addCategory: (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => boolean;
+  updateCategoryLimit: (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => void;
   updateCategoryName: (currentName: string, nextName: string) => boolean;
   deleteCategory: (name: string) => void;
   addTransaction: (transaction: TransactionInput) => void;
@@ -65,25 +74,33 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
 
-  const addCategory = (name: string, monthlyLimit: number) => {
+  const addCategory = (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => {
     const nextName = name.trim();
-    if (!nextName || monthlyLimit <= 0) return false;
+    if (!nextName || limitValue <= 0) return false;
 
     const exists = categories.some(
       (category) => category.name.toLowerCase() === nextName.toLowerCase(),
     );
     if (exists) return false;
 
-    setCategories((current) => [...current, { name: nextName, monthlyLimit }]);
+    setCategories((current) => [...current, { name: nextName, limitType, limitValue }]);
     return true;
   };
 
-  const updateCategoryLimit = (name: string, monthlyLimit: number) => {
-    if (monthlyLimit <= 0) return;
+  const updateCategoryLimit = (
+    name: string,
+    limitType: "amount" | "percent",
+    limitValue: number,
+  ) => {
+    if (limitValue <= 0) return;
 
     setCategories((current) =>
       current.map((category) =>
-        category.name === name ? { ...category, monthlyLimit } : category,
+        category.name === name ? { ...category, limitType, limitValue } : category,
       ),
     );
   };

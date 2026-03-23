@@ -24,7 +24,12 @@ const formatMonthLabel = (monthKey: string) => {
 
 export default function SpendingMonthPage() {
   const { month } = useParams<{ month: string }>();
-  const { categories, transactions } = useBudget();
+  const { categories, transactions, incomes } = useBudget();
+
+  const monthlyIncome = useMemo(
+    () => incomes.reduce((total, income) => total + income.postTaxAmount, 0),
+    [incomes],
+  );
 
   const isValidMonth =
     /^\d{4}-\d{2}$/.test(month) && Number(month.slice(5, 7)) >= 1 && Number(month.slice(5, 7)) <= 12;
@@ -44,11 +49,17 @@ export default function SpendingMonthPage() {
       return {
         category: category.name,
         currentSpend,
-        maxSpend: category.monthlyLimit,
-        spendLeft: category.monthlyLimit - currentSpend,
+        maxSpend:
+          category.limitType === "amount"
+            ? category.limitValue
+            : (monthlyIncome * category.limitValue) / 100,
+        spendLeft:
+          (category.limitType === "amount"
+            ? category.limitValue
+            : (monthlyIncome * category.limitValue) / 100) - currentSpend,
       };
     });
-  }, [categories, isValidMonth, month, transactions]);
+  }, [categories, isValidMonth, month, monthlyIncome, transactions]);
 
   const totalSpending = useMemo(
     () =>
