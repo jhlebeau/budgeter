@@ -36,6 +36,7 @@ model SpendingCategory {
   updatedAt   DateTime @updatedAt
 
   transactions Transaction[]
+  recurringTransactions RecurringTransaction[]
 }
 
 model SavingCategory {
@@ -58,9 +59,27 @@ model Transaction {
 
   categoryId   String
   category     SpendingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  recurringSeriesId String?
+  recurringSeries   RecurringTransaction? @relation(fields: [recurringSeriesId], references: [id], onDelete: SetNull)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model RecurringTransaction {
+  id          String   @id @default(uuid())
+  frequency   RecurrenceFrequency
+  startDate   DateTime
+  amount      Float
+  description String?
+
+  categoryId  String
+  category    SpendingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  transactions Transaction[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum Frequency {
@@ -71,4 +90,10 @@ enum Frequency {
 enum LimitType {
   AMOUNT
   PERCENT
+}
+
+enum RecurrenceFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
 }

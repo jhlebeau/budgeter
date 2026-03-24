@@ -16,6 +16,8 @@ export type Transaction = {
   categoryName: string;
   date: string;
   note: string;
+  recurringSeriesId: string | null;
+  recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
 };
 
 export type TransactionInput = {
@@ -23,7 +25,11 @@ export type TransactionInput = {
   categoryId: string;
   date: string;
   note: string;
+  isRecurring?: boolean;
+  recurrenceFrequency?: "daily" | "weekly" | "monthly";
 };
+
+export type RecurrenceScope = "this" | "future" | "all";
 
 export type Income = {
   id: string;
@@ -75,8 +81,12 @@ type BudgetContextValue = {
   updateSavingCategoryName: (id: string, nextName: string) => Promise<boolean>;
   deleteSavingCategory: (id: string) => Promise<void>;
   addTransaction: (transaction: TransactionInput) => Promise<void>;
-  updateTransaction: (id: string, transaction: TransactionInput) => Promise<void>;
-  deleteTransaction: (id: string) => Promise<void>;
+  updateTransaction: (
+    id: string,
+    transaction: TransactionInput,
+    scope?: RecurrenceScope,
+  ) => Promise<void>;
+  deleteTransaction: (id: string, scope?: RecurrenceScope) => Promise<void>;
   addIncome: (income: IncomeInput) => Promise<void>;
   updateIncome: (id: string, income: IncomeInput) => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
@@ -116,6 +126,7 @@ type ApiTransaction = {
   description: string | null;
   categoryId: string;
   category: { id: string; name: string };
+  recurringSeries: { id: string; frequency: "DAILY" | "WEEKLY" | "MONTHLY" } | null;
 };
 
 const toIncome = (income: ApiIncome): Income => {
@@ -152,6 +163,15 @@ const toTransaction = (transaction: ApiTransaction): Transaction => ({
   categoryName: transaction.category.name,
   date: transaction.date.slice(0, 10),
   note: transaction.description ?? "",
+  recurringSeriesId: transaction.recurringSeries?.id ?? null,
+  recurrenceFrequency:
+    transaction.recurringSeries?.frequency === "DAILY"
+      ? "daily"
+      : transaction.recurringSeries?.frequency === "WEEKLY"
+        ? "weekly"
+        : transaction.recurringSeries?.frequency === "MONTHLY"
+          ? "monthly"
+          : null,
 });
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
@@ -207,6 +227,13 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       isActive = false;
     };
   }, []);
+
+  const refreshTransactions = async () => {
+    const response = await fetch("/api/transactions", { cache: "no-store" });
+    if (!response.ok) return;
+    const transactionsData = (await response.json()) as ApiTransaction[];
+    setTransactions(transactionsData.map(toTransaction));
+  };
 
   const addCategory = async (
     name: string,
@@ -387,15 +414,19 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         categoryId: transaction.categoryId,
         date: transaction.date,
         description: transaction.note || null,
+        isRecurring: transaction.isRecurring === true,
+        recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
       }),
     });
     if (!response.ok) return;
-
-    const created = (await response.json()) as ApiTransaction;
-    setTransactions((current) => [toTransaction(created), ...current]);
+    await refreshTransactions();
   };
 
-  const updateTransaction = async (id: string, transaction: TransactionInput) => {
+  const updateTransaction = async (
+    id: string,
+    transaction: TransactionInput,
+    scope: RecurrenceScope = "this",
+  ) => {
     const response = await fetch(`/api/transactions/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -404,23 +435,24 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         categoryId: transaction.categoryId,
         date: transaction.date,
         description: transaction.note || null,
+        recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
+        scope: scope.toUpperCase(),
       }),
     });
     if (!response.ok) return;
-
-    const updated = (await response.json()) as ApiTransaction;
-    setTransactions((current) =>
-      current.map((item) => (item.id === id ? toTransaction(updated) : item)),
-    );
+    await refreshTransactions();
   };
 
-  const deleteTransaction = async (id: string) => {
+  const deleteTransaction = async (id: string, scope: RecurrenceScope = "this") => {
     const response = await fetch(`/api/transactions/${id}`, {
       method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scope: scope.toUpperCase(),
+      }),
     });
     if (!response.ok) return;
-
-    setTransactions((current) => current.filter((item) => item.id !== id));
+    await refreshTransactions();
   };
 
   const addIncome = async (income: IncomeInput) => {

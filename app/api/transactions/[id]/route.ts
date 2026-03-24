@@ -1,12 +1,96 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, RecurrenceFrequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { dateKey, generateRecurringDates, toUtcDateOnly } from "@/lib/recurring";
+
+type Scope = "THIS" | "FUTURE" | "ALL";
 
 const parseDate = (value: unknown) => {
   if (typeof value !== "string" && !(value instanceof Date)) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date;
+};
+
+const parseScope = (value: unknown): Scope | null => {
+  if (value === undefined || value === null) return "THIS";
+  if (value === "THIS" || value === "FUTURE" || value === "ALL") return value;
+  return null;
+};
+
+const parseFrequency = (value: unknown) => {
+  if (value === undefined || value === null) return undefined;
+  if (
+    typeof value === "string" &&
+    Object.values(RecurrenceFrequency).includes(value as RecurrenceFrequency)
+  ) {
+    return value as RecurrenceFrequency;
+  }
+  return null;
+};
+
+type UpdatePayload = {
+  amount?: unknown;
+  date?: unknown;
+  description?: unknown;
+  categoryId?: unknown;
+  recurrenceFrequency?: unknown;
+  scope?: unknown;
+};
+
+const validateUpdatePayload = (body: UpdatePayload) => {
+  if (body.amount !== undefined && (typeof body.amount !== "number" || body.amount <= 0)) {
+    return { error: "amount must be a positive number when provided.", status: 400 };
+  }
+
+  let parsedDate: Date | undefined;
+  if (body.date !== undefined) {
+    const parsedDateOrNull = parseDate(body.date);
+    if (!parsedDateOrNull) {
+      return { error: "date must be a valid ISO date when provided.", status: 400 };
+    }
+    parsedDate = toUtcDateOnly(parsedDateOrNull);
+  }
+
+  if (
+    body.description !== undefined &&
+    body.description !== null &&
+    typeof body.description !== "string"
+  ) {
+    return {
+      error: "description must be a string or null when provided.",
+      status: 400,
+    };
+  }
+
+  if (
+    body.categoryId !== undefined &&
+    (typeof body.categoryId !== "string" || !body.categoryId.trim())
+  ) {
+    return {
+      error: "categoryId must be a non-empty string when provided.",
+      status: 400,
+    };
+  }
+
+  const parsedScope = parseScope(body.scope);
+  if (!parsedScope) {
+    return { error: "scope must be THIS, FUTURE, or ALL.", status: 400 };
+  }
+
+  const parsedFrequency = parseFrequency(body.recurrenceFrequency);
+  if (parsedFrequency === null) {
+    return {
+      error: "recurrenceFrequency must be DAILY, WEEKLY, or MONTHLY when provided.",
+      status: 400,
+    };
+  }
+
+  return {
+    parsedDate,
+    parsedScope,
+    parsedFrequency,
+  };
 };
 
 export async function GET(
@@ -16,7 +100,7 @@ export async function GET(
   const { id } = await context.params;
   const transaction = await prisma.transaction.findUnique({
     where: { id },
-    include: { category: true },
+    include: { category: true, recurringSeries: true },
   });
 
   if (!transaction) {
@@ -32,78 +116,140 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params;
-    const body = await request.json();
-    const {
-      amount,
-      date,
-      description,
-      categoryId,
-    }: {
-      amount?: unknown;
-      date?: unknown;
-      description?: unknown;
-      categoryId?: unknown;
-    } = body;
-
-    if (amount !== undefined && (typeof amount !== "number" || amount <= 0)) {
-      return NextResponse.json(
-        { error: "amount must be a positive number when provided." },
-        { status: 400 },
-      );
+    const body = (await request.json()) as UpdatePayload;
+    const validation = validateUpdatePayload(body);
+    if ("error" in validation) {
+      return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
-    let parsedDate: Date | undefined;
-    if (date !== undefined) {
-      const parsedDateOrNull = parseDate(date);
-      if (!parsedDateOrNull) {
-        return NextResponse.json(
-          { error: "date must be a valid ISO date when provided." },
-          { status: 400 },
-        );
-      }
-      parsedDate = parsedDateOrNull;
-    }
+    const { parsedDate, parsedScope, parsedFrequency } = validation;
+    const existing = await prisma.transaction.findUnique({
+      where: { id },
+      include: { recurringSeries: true },
+    });
 
-    if (
-      description !== undefined &&
-      description !== null &&
-      typeof description !== "string"
-    ) {
-      return NextResponse.json(
-        { error: "description must be a string or null when provided." },
-        { status: 400 },
-      );
-    }
-
-    if (
-      categoryId !== undefined &&
-      (typeof categoryId !== "string" || !categoryId.trim())
-    ) {
-      return NextResponse.json(
-        { error: "categoryId must be a non-empty string when provided." },
-        { status: 400 },
-      );
-    }
-
-    const existing = await prisma.transaction.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Transaction not found." }, { status: 404 });
     }
 
-    const transaction = await prisma.transaction.update({
-      where: { id },
-      data: {
-        ...(amount !== undefined ? { amount } : {}),
-        ...(parsedDate !== undefined ? { date: parsedDate } : {}),
-        ...(description !== undefined ? { description } : {}),
-        ...(categoryId !== undefined
-          ? { category: { connect: { id: categoryId } } }
-          : {}),
-      },
-      include: { category: true },
+    const nextAmount = body.amount !== undefined ? (body.amount as number) : existing.amount;
+    const nextDate = parsedDate ?? toUtcDateOnly(existing.date);
+    const nextDescription =
+      body.description !== undefined ? (body.description as string | null) : existing.description;
+    const nextCategoryId =
+      body.categoryId !== undefined ? (body.categoryId as string) : existing.categoryId;
+
+    if (!existing.recurringSeriesId || parsedScope === "THIS") {
+      const updated = await prisma.transaction.update({
+        where: { id },
+        data: {
+          ...(body.amount !== undefined ? { amount: nextAmount } : {}),
+          ...(parsedDate !== undefined ? { date: nextDate } : {}),
+          ...(body.description !== undefined ? { description: nextDescription } : {}),
+          ...(body.categoryId !== undefined ? { categoryId: nextCategoryId } : {}),
+          ...(existing.recurringSeriesId ? { recurringSeriesId: null } : {}),
+        },
+        include: { category: true, recurringSeries: true },
+      });
+      return NextResponse.json(updated);
+    }
+
+    const seriesId = existing.recurringSeriesId;
+    const series = existing.recurringSeries;
+    if (!series) {
+      return NextResponse.json(
+        { error: "Recurring series not found." },
+        { status: 404 },
+      );
+    }
+
+    const nextFrequency = parsedFrequency ?? series.frequency;
+    const now = toUtcDateOnly(new Date());
+    const regenerationStart =
+      parsedScope === "THIS"
+        ? toUtcDateOnly(existing.date)
+        : nextDate;
+
+    if (regenerationStart.getTime() > now.getTime()) {
+      return NextResponse.json(
+        { error: "Cannot regenerate recurring transactions from a future date." },
+        { status: 400 },
+      );
+    }
+
+    const updatedId = await prisma.$transaction(async (tx) => {
+      await tx.recurringTransaction.update({
+        where: { id: seriesId },
+        data: {
+          amount: nextAmount,
+          description: nextDescription,
+          categoryId: nextCategoryId,
+          frequency: nextFrequency,
+          ...(parsedScope === "ALL" ? { startDate: nextDate } : {}),
+        },
+      });
+
+      if (parsedScope === "ALL") {
+        await tx.transaction.deleteMany({
+          where: { recurringSeriesId: seriesId },
+        });
+      } else {
+        const deleteFromDate =
+          nextDate.getTime() < toUtcDateOnly(existing.date).getTime()
+            ? nextDate
+            : toUtcDateOnly(existing.date);
+        await tx.transaction.deleteMany({
+          where: {
+            recurringSeriesId: seriesId,
+            date: { gte: deleteFromDate },
+          },
+        });
+      }
+
+      const recurrenceStart = nextDate;
+      const dates = generateRecurringDates(recurrenceStart, now, nextFrequency);
+      if (dates.length === 0) {
+        throw new Error("No recurrence dates generated.");
+      }
+
+      const createdTransactions = await Promise.all(
+        dates.map((occurrenceDate) =>
+          tx.transaction.create({
+            data: {
+              amount: nextAmount,
+              date: occurrenceDate,
+              description: nextDescription,
+              categoryId: nextCategoryId,
+              recurringSeriesId: seriesId,
+            },
+            select: { id: true, date: true },
+          }),
+        ),
+      );
+
+      if (parsedScope === "ALL") {
+        return createdTransactions[0].id;
+      }
+
+      const selected = createdTransactions.find(
+        (transaction) => dateKey(transaction.date) === dateKey(nextDate),
+      );
+      return selected?.id ?? createdTransactions[0].id;
     });
 
-    return NextResponse.json(transaction);
+    const updated = await prisma.transaction.findUnique({
+      where: { id: updatedId },
+      include: { category: true, recurringSeries: true },
+    });
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Unable to update transaction." },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(updated);
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -122,17 +268,67 @@ export async function PATCH(
   }
 }
 
+type DeletePayload = {
+  scope?: unknown;
+};
+
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await context.params;
-  const existing = await prisma.transaction.findUnique({ where: { id } });
+  try {
+    const { id } = await context.params;
+    let body: DeletePayload = {};
+    try {
+      body = (await request.json()) as DeletePayload;
+    } catch {
+      body = {};
+    }
+    const scope = parseScope(body.scope);
+    if (!scope) {
+      return NextResponse.json(
+        { error: "scope must be THIS, FUTURE, or ALL." },
+        { status: 400 },
+      );
+    }
 
-  if (!existing) {
-    return NextResponse.json({ error: "Transaction not found." }, { status: 404 });
+    const existing = await prisma.transaction.findUnique({
+      where: { id },
+      include: { recurringSeries: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Transaction not found." }, { status: 404 });
+    }
+
+    if (!existing.recurringSeriesId || scope === "THIS") {
+      await prisma.transaction.delete({ where: { id } });
+      return new NextResponse(null, { status: 204 });
+    }
+
+    if (scope === "FUTURE") {
+      await prisma.transaction.deleteMany({
+        where: {
+          recurringSeriesId: existing.recurringSeriesId,
+          date: { gte: toUtcDateOnly(existing.date) },
+        },
+      });
+      return new NextResponse(null, { status: 204 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.transaction.deleteMany({
+        where: { recurringSeriesId: existing.recurringSeriesId },
+      });
+      await tx.recurringTransaction.delete({
+        where: { id: existing.recurringSeriesId },
+      });
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch {
+    return NextResponse.json(
+      { error: "Unable to delete transaction." },
+      { status: 500 },
+    );
   }
-
-  await prisma.transaction.delete({ where: { id } });
-  return new NextResponse(null, { status: 204 });
 }

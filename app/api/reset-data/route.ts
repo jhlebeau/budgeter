@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function DELETE() {
   try {
     await prisma.transaction.deleteMany();
+    await prisma.recurringTransaction.deleteMany();
     await prisma.spendingCategory.deleteMany();
     await prisma.savingCategory.deleteMany();
     await prisma.incomeSource.deleteMany();
