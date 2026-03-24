@@ -2,6 +2,7 @@ import { Prisma, RecurrenceFrequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dateKey, generateRecurringDates, toUtcDateOnly } from "@/lib/recurring";
+import { requireUserId, userExists } from "@/lib/api-user";
 
 const parseDate = (value: unknown) => {
   if (typeof value !== "string" && !(value instanceof Date)) return null;
@@ -10,9 +11,16 @@ const parseDate = (value: unknown) => {
   return date;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const now = toUtcDateOnly(new Date());
   const recurringSeries = await prisma.recurringTransaction.findMany({
+    where: { userId },
     include: {
       transactions: {
         select: { date: true },
@@ -35,6 +43,7 @@ export async function GET() {
           amount: series.amount,
           date,
           description: series.description,
+          userId,
           categoryId: series.categoryId,
           recurringSeriesId: series.id,
         })),
@@ -43,6 +52,7 @@ export async function GET() {
   }
 
   const transactions = await prisma.transaction.findMany({
+    where: { userId },
     include: { category: true, recurringSeries: true },
     orderBy: { date: "desc" },
   });
@@ -51,6 +61,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { userId, errorResponse } = requireUserId(request);
+    if (errorResponse || !userId) return errorResponse!;
+    if (!(await userExists(userId))) {
+      return NextResponse.json({ error: "User not found." }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       amount,
@@ -89,6 +105,17 @@ export async function POST(request: Request) {
     }
 
     const normalizedDate = toUtcDateOnly(parsedDate);
+    const category = await prisma.spendingCategory.findFirst({
+      where: { id: categoryId, userId },
+      select: { id: true },
+    });
+    if (!category) {
+      return NextResponse.json(
+        { error: "Invalid categoryId. Referenced category does not exist." },
+        { status: 400 },
+      );
+    }
+
     const shouldRecur = isRecurring === true;
     let parsedFrequency: RecurrenceFrequency | null = null;
 
@@ -129,6 +156,7 @@ export async function POST(request: Request) {
             amount,
             description: typeof description === "string" ? description : null,
             categoryId,
+            userId,
           },
         });
 
@@ -140,6 +168,7 @@ export async function POST(request: Request) {
                 date: occurrenceDate,
                 description: typeof description === "string" ? description : null,
                 categoryId,
+                userId,
                 recurringSeriesId: series.id,
               },
               select: { id: true },
@@ -159,7 +188,8 @@ export async function POST(request: Request) {
           amount,
           date: normalizedDate,
           description: typeof description === "string" ? description : null,
-          category: { connect: { id: categoryId } },
+          categoryId,
+          userId,
         },
         select: { id: true },
       });

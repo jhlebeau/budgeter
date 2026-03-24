@@ -1,12 +1,20 @@
 import { Frequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUserId, userExists } from "@/lib/api-user";
 
 const isFrequency = (value: unknown): value is Frequency =>
   value === "MONTHLY" || value === "ANNUAL";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const incomeSources = await prisma.incomeSource.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(incomeSources);
@@ -14,6 +22,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { userId, errorResponse } = requireUserId(request);
+    if (errorResponse || !userId) return errorResponse!;
+    if (!(await userExists(userId))) {
+      return NextResponse.json({ error: "User not found." }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       name,
@@ -68,6 +82,7 @@ export async function POST(request: Request) {
         amount,
         frequency,
         isPreTax,
+        userId,
         taxRate: isPreTax ? (taxRate as number | undefined) : null,
         taxState: isPreTax ? (taxState as string | undefined) : null,
       },
@@ -81,4 +96,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

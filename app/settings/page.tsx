@@ -8,7 +8,7 @@ export default function SettingsPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
-      <Link href="/" className="mb-5 inline-block text-sm text-zinc-600 hover:underline">
+      <Link href="/home" className="mb-5 inline-block text-sm text-zinc-600 hover:underline">
         Back to Home
       </Link>
       <h1 className="mb-4 text-2xl font-semibold">Settings</h1>
@@ -16,7 +16,7 @@ export default function SettingsPage() {
         type="button"
         onClick={async () => {
           const shouldReset = window.confirm(
-            "Reset all data? This will delete all income sources, spending categories, and transactions.",
+            "Reset your data? This will delete your income sources, spending categories, savings categories, and transactions.",
           );
           if (!shouldReset) return;
           await resetData();
@@ -28,4 +28,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-

@@ -17,6 +17,8 @@ model IncomeSource {
   amount    Float
   frequency Frequency
   isPreTax  Boolean
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   taxRate   Float?
   taxState  String?
@@ -28,6 +30,8 @@ model IncomeSource {
 model SpendingCategory {
   id          String   @id @default(uuid())
   name        String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   limitType   LimitType
   limitValue  Float
@@ -42,6 +46,8 @@ model SpendingCategory {
 model SavingCategory {
   id         String   @id @default(uuid())
   name       String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   limitType  LimitType
   limitValue Float
@@ -56,6 +62,8 @@ model Transaction {
   amount       Float
   date         DateTime
   description  String?
+  userId       String
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   categoryId   String
   category     SpendingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -72,6 +80,8 @@ model RecurringTransaction {
   startDate   DateTime
   amount      Float
   description String?
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   categoryId  String
   category    SpendingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -80,6 +90,19 @@ model RecurringTransaction {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  username             String
+  usernameKey          String   @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  incomeSources        IncomeSource[]
+  spendingCategories   SpendingCategory[]
+  savingCategories     SavingCategory[]
+  transactions         Transaction[]
+  recurringTransactions RecurringTransaction[]
 }
 
 enum Frequency {

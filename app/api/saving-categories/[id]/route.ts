@@ -1,16 +1,23 @@
 import { LimitType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUserId, userExists } from "@/lib/api-user";
 
 const isLimitType = (value: unknown): value is LimitType =>
   value === "AMOUNT" || value === "PERCENT";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const category = await prisma.savingCategory.findUnique({ where: { id } });
+  const category = await prisma.savingCategory.findFirst({ where: { id, userId } });
 
   if (!category) {
     return NextResponse.json(
@@ -27,6 +34,12 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { userId, errorResponse } = requireUserId(request);
+    if (errorResponse || !userId) return errorResponse!;
+    if (!(await userExists(userId))) {
+      return NextResponse.json({ error: "User not found." }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const body = await request.json();
     const {
@@ -61,7 +74,9 @@ export async function PATCH(
       );
     }
 
-    const existing = await prisma.savingCategory.findUnique({ where: { id } });
+    const existing = await prisma.savingCategory.findFirst({
+      where: { id, userId },
+    });
     if (!existing) {
       return NextResponse.json(
         { error: "Saving category not found." },
@@ -88,11 +103,17 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const existing = await prisma.savingCategory.findUnique({ where: { id } });
+  const existing = await prisma.savingCategory.findFirst({ where: { id, userId } });
 
   if (!existing) {
     return NextResponse.json(
@@ -104,4 +125,3 @@ export async function DELETE(
   await prisma.savingCategory.delete({ where: { id } });
   return new NextResponse(null, { status: 204 });
 }
-

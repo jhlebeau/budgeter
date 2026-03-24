@@ -1,16 +1,25 @@
 import { Frequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUserId, userExists } from "@/lib/api-user";
 
 const isFrequency = (value: unknown): value is Frequency =>
   value === "MONTHLY" || value === "ANNUAL";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const incomeSource = await prisma.incomeSource.findUnique({ where: { id } });
+  const incomeSource = await prisma.incomeSource.findFirst({
+    where: { id, userId },
+  });
 
   if (!incomeSource) {
     return NextResponse.json({ error: "Income source not found." }, { status: 404 });
@@ -24,6 +33,12 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { userId, errorResponse } = requireUserId(request);
+    if (errorResponse || !userId) return errorResponse!;
+    if (!(await userExists(userId))) {
+      return NextResponse.json({ error: "User not found." }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const body = await request.json();
     const {
@@ -79,7 +94,7 @@ export async function PATCH(
       );
     }
 
-    const current = await prisma.incomeSource.findUnique({ where: { id } });
+    const current = await prisma.incomeSource.findFirst({ where: { id, userId } });
     if (!current) {
       return NextResponse.json({ error: "Income source not found." }, { status: 404 });
     }
@@ -113,11 +128,17 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const existing = await prisma.incomeSource.findUnique({ where: { id } });
+  const existing = await prisma.incomeSource.findFirst({ where: { id, userId } });
 
   if (!existing) {
     return NextResponse.json({ error: "Income source not found." }, { status: 404 });
@@ -126,4 +147,3 @@ export async function DELETE(
   await prisma.incomeSource.delete({ where: { id } });
   return new NextResponse(null, { status: 204 });
 }
-

@@ -2,6 +2,7 @@ import { Prisma, RecurrenceFrequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dateKey, generateRecurringDates, toUtcDateOnly } from "@/lib/recurring";
+import { requireUserId, userExists } from "@/lib/api-user";
 
 type Scope = "THIS" | "FUTURE" | "ALL";
 
@@ -94,12 +95,18 @@ const validateUpdatePayload = (body: UpdatePayload) => {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const { userId, errorResponse } = requireUserId(request);
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
   const { id } = await context.params;
-  const transaction = await prisma.transaction.findUnique({
-    where: { id },
+  const transaction = await prisma.transaction.findFirst({
+    where: { id, userId },
     include: { category: true, recurringSeries: true },
   });
 
@@ -115,6 +122,12 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { userId, errorResponse } = requireUserId(request);
+    if (errorResponse || !userId) return errorResponse!;
+    if (!(await userExists(userId))) {
+      return NextResponse.json({ error: "User not found." }, { status: 401 });
+    }
+
     const { id } = await context.params;
     const body = (await request.json()) as UpdatePayload;
     const validation = validateUpdatePayload(body);
@@ -128,7 +141,7 @@ export async function PATCH(
       include: { recurringSeries: true },
     });
 
-    if (!existing) {
+    if (!existing || existing.userId !== userId) {
       return NextResponse.json({ error: "Transaction not found." }, { status: 404 });
     }
 
@@ -138,6 +151,19 @@ export async function PATCH(
       body.description !== undefined ? (body.description as string | null) : existing.description;
     const nextCategoryId =
       body.categoryId !== undefined ? (body.categoryId as string) : existing.categoryId;
+
+    if (body.categoryId !== undefined) {
+      const category = await prisma.spendingCategory.findFirst({
+        where: { id: nextCategoryId, userId },
+        select: { id: true },
+      });
+      if (!category) {
+        return NextResponse.json(
+          { error: "Invalid categoryId. Referenced category does not exist." },
+          { status: 400 },
+        );
+      }
+    }
 
     if (!existing.recurringSeriesId || parsedScope === "THIS") {
       const updated = await prisma.transaction.update({
@@ -184,6 +210,7 @@ export async function PATCH(
           amount: nextAmount,
           description: nextDescription,
           categoryId: nextCategoryId,
+          userId,
           frequency: nextFrequency,
           ...(parsedScope === "ALL" ? { startDate: nextDate } : {}),
         },
@@ -191,7 +218,7 @@ export async function PATCH(
 
       if (parsedScope === "ALL") {
         await tx.transaction.deleteMany({
-          where: { recurringSeriesId: seriesId },
+          where: { recurringSeriesId: seriesId, userId },
         });
       } else {
         const deleteFromDate =
@@ -200,6 +227,7 @@ export async function PATCH(
             : toUtcDateOnly(existing.date);
         await tx.transaction.deleteMany({
           where: {
+            userId,
             recurringSeriesId: seriesId,
             date: { gte: deleteFromDate },
           },
@@ -220,6 +248,7 @@ export async function PATCH(
               date: occurrenceDate,
               description: nextDescription,
               categoryId: nextCategoryId,
+              userId,
               recurringSeriesId: seriesId,
             },
             select: { id: true, date: true },
@@ -277,6 +306,12 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { userId, errorResponse } = requireUserId(request);
+    if (errorResponse || !userId) return errorResponse!;
+    if (!(await userExists(userId))) {
+      return NextResponse.json({ error: "User not found." }, { status: 401 });
+    }
+
     const { id } = await context.params;
     let body: DeletePayload = {};
     try {
@@ -292,8 +327,8 @@ export async function DELETE(
       );
     }
 
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
+    const existing = await prisma.transaction.findFirst({
+      where: { id, userId },
       include: { recurringSeries: true },
     });
 
@@ -309,6 +344,7 @@ export async function DELETE(
     if (scope === "FUTURE") {
       await prisma.transaction.deleteMany({
         where: {
+          userId,
           recurringSeriesId: existing.recurringSeriesId,
           date: { gte: toUtcDateOnly(existing.date) },
         },
@@ -318,10 +354,10 @@ export async function DELETE(
 
     await prisma.$transaction(async (tx) => {
       await tx.transaction.deleteMany({
-        where: { recurringSeriesId: existing.recurringSeriesId },
+        where: { userId, recurringSeriesId: existing.recurringSeriesId },
       });
-      await tx.recurringTransaction.delete({
-        where: { id: existing.recurringSeriesId },
+      await tx.recurringTransaction.deleteMany({
+        where: { id: existing.recurringSeriesId, userId },
       });
     });
     return new NextResponse(null, { status: 204 });

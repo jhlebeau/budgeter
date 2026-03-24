@@ -201,7 +201,7 @@ export default function IncomePage() {
         <Link href="/setup" className="text-zinc-600 hover:underline">
           Back to Setup
         </Link>
-        <Link href="/" className="text-zinc-600 hover:underline">
+        <Link href="/home" className="text-zinc-600 hover:underline">
           Back to Home
         </Link>
       </div>

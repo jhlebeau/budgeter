@@ -1,12 +1,24 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 export type Category = {
   id: string;
   name: string;
   limitType: "amount" | "percent";
   limitValue: number;
+};
+
+export type AppUser = {
+  id: string;
+  username: string;
 };
 
 export type Transaction = {
@@ -52,6 +64,8 @@ export type IncomeInput = {
 };
 
 type BudgetContextValue = {
+  currentUser: AppUser | null;
+  setCurrentUser: (user: AppUser | null) => void;
   categories: Category[];
   savingCategories: Category[];
   transactions: Transaction[];
@@ -175,12 +189,53 @@ const toTransaction = (transaction: ApiTransaction): Transaction => ({
 });
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUserState] = useState<AppUser | null>(() => {
+    if (typeof window === "undefined") return null;
+    const rawUser = window.localStorage.getItem("budget-tracker-user");
+    if (!rawUser) return null;
+    try {
+      const parsed = JSON.parse(rawUser) as AppUser;
+      if (parsed.id && parsed.username) {
+        return parsed;
+      }
+    } catch {
+      window.localStorage.removeItem("budget-tracker-user");
+    }
+    return null;
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingCategories, setSavingCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
 
+  const setCurrentUser = (user: AppUser | null) => {
+    setCategories([]);
+    setSavingCategories([]);
+    setTransactions([]);
+    setIncomes([]);
+    setCurrentUserState(user);
+    if (user) {
+      window.localStorage.setItem("budget-tracker-user", JSON.stringify(user));
+      return;
+    }
+    window.localStorage.removeItem("budget-tracker-user");
+  };
+
+  const authFetch = useCallback(async (url: string, init?: RequestInit) => {
+    if (!currentUser) return null;
+    return fetch(url, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": currentUser.id,
+        ...(init?.headers ?? {}),
+      },
+    });
+  }, [currentUser]);
+
   useEffect(() => {
+    if (!currentUser) return;
+
     let isActive = true;
 
     const load = async () => {
@@ -191,13 +246,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         incomesResponse,
       ] =
         await Promise.all([
-          fetch("/api/spending-categories", { cache: "no-store" }),
-          fetch("/api/saving-categories", { cache: "no-store" }),
-          fetch("/api/transactions", { cache: "no-store" }),
-          fetch("/api/income-sources", { cache: "no-store" }),
+          authFetch("/api/spending-categories", { cache: "no-store" }),
+          authFetch("/api/saving-categories", { cache: "no-store" }),
+          authFetch("/api/transactions", { cache: "no-store" }),
+          authFetch("/api/income-sources", { cache: "no-store" }),
         ]);
 
       if (
+        !categoriesResponse ||
+        !savingCategoriesResponse ||
+        !transactionsResponse ||
+        !incomesResponse ||
         !isActive ||
         !categoriesResponse.ok ||
         !savingCategoriesResponse.ok ||
@@ -226,11 +285,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [authFetch, currentUser]);
 
   const refreshTransactions = async () => {
-    const response = await fetch("/api/transactions", { cache: "no-store" });
-    if (!response.ok) return;
+    const response = await authFetch("/api/transactions", { cache: "no-store" });
+    if (!response || !response.ok) return;
     const transactionsData = (await response.json()) as ApiTransaction[];
     setTransactions(transactionsData.map(toTransaction));
   };
@@ -248,16 +307,15 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     );
     if (exists) return false;
 
-    const response = await fetch("/api/spending-categories", {
+    const response = await authFetch("/api/spending-categories", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: nextName,
         limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
         limitValue,
       }),
     });
-    if (!response.ok) return false;
+    if (!response || !response.ok) return false;
 
     const created = (await response.json()) as ApiCategory;
     setCategories((current) => [toCategory(created), ...current]);
@@ -271,15 +329,14 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   ) => {
     if (limitValue <= 0) return;
 
-    const response = await fetch(`/api/spending-categories/${id}`, {
+    const response = await authFetch(`/api/spending-categories/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
         limitValue,
       }),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     const updated = (await response.json()) as ApiCategory;
     setCategories((current) =>
@@ -291,12 +348,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     const trimmedName = nextName.trim();
     if (!trimmedName) return false;
 
-    const response = await fetch(`/api/spending-categories/${id}`, {
+    const response = await authFetch(`/api/spending-categories/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: trimmedName }),
     });
-    if (!response.ok) return false;
+    if (!response || !response.ok) return false;
 
     const updated = (await response.json()) as ApiCategory;
     setCategories((current) =>
@@ -313,10 +369,10 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteCategory = async (id: string) => {
-    const response = await fetch(`/api/spending-categories/${id}`, {
+    const response = await authFetch(`/api/spending-categories/${id}`, {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     setCategories((current) => current.filter((category) => category.id !== id));
     setTransactions((current) =>
@@ -337,16 +393,15 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     );
     if (exists) return false;
 
-    const response = await fetch("/api/saving-categories", {
+    const response = await authFetch("/api/saving-categories", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: nextName,
         limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
         limitValue,
       }),
     });
-    if (!response.ok) return false;
+    if (!response || !response.ok) return false;
 
     const created = (await response.json()) as ApiSavingCategory;
     setSavingCategories((current) => [toCategory(created), ...current]);
@@ -360,15 +415,14 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   ) => {
     if (limitValue <= 0) return;
 
-    const response = await fetch(`/api/saving-categories/${id}`, {
+    const response = await authFetch(`/api/saving-categories/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
         limitValue,
       }),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     const updated = (await response.json()) as ApiSavingCategory;
     setSavingCategories((current) =>
@@ -380,12 +434,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     const trimmedName = nextName.trim();
     if (!trimmedName) return false;
 
-    const response = await fetch(`/api/saving-categories/${id}`, {
+    const response = await authFetch(`/api/saving-categories/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: trimmedName }),
     });
-    if (!response.ok) return false;
+    if (!response || !response.ok) return false;
 
     const updated = (await response.json()) as ApiSavingCategory;
     setSavingCategories((current) =>
@@ -395,10 +448,10 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteSavingCategory = async (id: string) => {
-    const response = await fetch(`/api/saving-categories/${id}`, {
+    const response = await authFetch(`/api/saving-categories/${id}`, {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     setSavingCategories((current) =>
       current.filter((category) => category.id !== id),
@@ -406,9 +459,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const addTransaction = async (transaction: TransactionInput) => {
-    const response = await fetch("/api/transactions", {
+    const response = await authFetch("/api/transactions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: transaction.amount,
         categoryId: transaction.categoryId,
@@ -418,7 +470,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
       }),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
     await refreshTransactions();
   };
 
@@ -427,9 +479,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     transaction: TransactionInput,
     scope: RecurrenceScope = "this",
   ) => {
-    const response = await fetch(`/api/transactions/${id}`, {
+    const response = await authFetch(`/api/transactions/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         amount: transaction.amount,
         categoryId: transaction.categoryId,
@@ -439,19 +490,18 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         scope: scope.toUpperCase(),
       }),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
     await refreshTransactions();
   };
 
   const deleteTransaction = async (id: string, scope: RecurrenceScope = "this") => {
-    const response = await fetch(`/api/transactions/${id}`, {
+    const response = await authFetch(`/api/transactions/${id}`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         scope: scope.toUpperCase(),
       }),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
     await refreshTransactions();
   };
 
@@ -477,12 +527,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const response = await fetch("/api/income-sources", {
+    const response = await authFetch("/api/income-sources", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(incomePayload),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     const created = (await response.json()) as ApiIncome;
     setIncomes((current) => [toIncome(created), ...current]);
@@ -510,12 +559,11 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const response = await fetch(`/api/income-sources/${id}`, {
+    const response = await authFetch(`/api/income-sources/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(incomePayload),
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     const updated = (await response.json()) as ApiIncome;
     setIncomes((current) =>
@@ -524,19 +572,19 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteIncome = async (id: string) => {
-    const response = await fetch(`/api/income-sources/${id}`, {
+    const response = await authFetch(`/api/income-sources/${id}`, {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     setIncomes((current) => current.filter((item) => item.id !== id));
   };
 
   const resetData = async () => {
-    const response = await fetch("/api/reset-data", {
+    const response = await authFetch("/api/reset-data", {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response || !response.ok) return;
 
     setCategories([]);
     setSavingCategories([]);
@@ -547,6 +595,8 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   return (
     <BudgetContext.Provider
       value={{
+        currentUser,
+        setCurrentUser,
         categories,
         savingCategories,
         transactions,

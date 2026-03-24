@@ -1,34 +1,102 @@
-import Link from "next/link";
+"use client";
 
-export default function Home() {
+import { FormEvent, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppUser, useBudget } from "./budget-context";
+
+type ActionType = "login" | "create";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { currentUser, setCurrentUser } = useBudget();
+  const [username, setUsername] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      router.replace("/home");
+    }
+  }, [currentUser, router]);
+
+  const submit = async (action: ActionType) => {
+    setError("");
+    const trimmed = username.trim();
+    if (!trimmed) {
+      setError("Please enter a username.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response =
+        action === "login"
+          ? await fetch(`/api/users?username=${encodeURIComponent(trimmed)}`)
+          : await fetch("/api/users", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: trimmed }),
+            });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError("User not found. Create a new account first.");
+          return;
+        }
+        if (response.status === 409) {
+          setError("That username already exists. Try logging in.");
+          return;
+        }
+        setError("Unable to continue right now.");
+        return;
+      }
+
+      const user = (await response.json()) as AppUser;
+      setCurrentUser(user);
+      router.push("/home");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void submit("login");
+  };
+
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-12">
-      <h1 className="mb-6 text-3xl font-semibold">Budget Tracker</h1>
-      <p className="mb-6 text-zinc-600">Choose what you want to do:</p>
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/setup"
-          className="rounded border px-4 py-3 text-center font-medium hover:bg-zinc-50"
-        >
-          Set Income, Spending, and Savings
-        </Link>
-        <Link
-          href="/transactions"
-          className="rounded border px-4 py-3 text-center font-medium hover:bg-zinc-50"
-        >
-          Record Transaction
-        </Link>
-        <Link
-          href="/spending"
-          className="rounded border px-4 py-3 text-center font-medium hover:bg-zinc-50"
-        >
-          View Spending
-        </Link>
-      </div>
-      <Link href="/settings" className="mt-5 inline-block text-sm text-zinc-600 hover:underline">
-        Settings
-      </Link>
+    <main className="mx-auto w-full max-w-md px-4 py-12">
+      <h1 className="mb-2 text-3xl font-semibold">Budget Tracker</h1>
+      <p className="mb-6 text-zinc-600">Log in with your username or create a new account.</p>
+
+      <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          className="w-full rounded border px-3 py-2"
+          required
+        />
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+          >
+            Log In
+          </button>
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => void submit("create")}
+            className="rounded border px-4 py-2 hover:bg-zinc-50 disabled:cursor-not-allowed"
+          >
+            Create Account
+          </button>
+        </div>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      </form>
     </main>
   );
 }
-

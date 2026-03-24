@@ -104,7 +104,7 @@ export default function TransactionsPage() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
-      <Link href="/" className="mb-5 inline-block text-sm text-zinc-600 hover:underline">
+      <Link href="/home" className="mb-5 inline-block text-sm text-zinc-600 hover:underline">
         Back to Home
       </Link>
       <h1 className="mb-4 text-2xl font-semibold">Record Transaction</h1>
