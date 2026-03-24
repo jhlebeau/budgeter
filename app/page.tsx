@@ -26,6 +26,10 @@ export default function LoginPage() {
       setError("Please enter a username.");
       return;
     }
+    if (/\s/.test(trimmed)) {
+      setError("Username cannot contain spaces.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -76,6 +80,8 @@ export default function LoginPage() {
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           className="w-full rounded border px-3 py-2"
+          pattern="^\S+$"
+          title="Username cannot contain spaces."
           required
         />
         <div className="flex gap-2">

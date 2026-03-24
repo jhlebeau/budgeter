@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 const normalizeUsername = (value: string) => value.trim().toLowerCase();
+const hasWhitespace = (value: string) => /\s/.test(value);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -9,6 +10,12 @@ export async function GET(request: Request) {
   if (!username || !username.trim()) {
     return NextResponse.json(
       { error: "username query param is required." },
+      { status: 400 },
+    );
+  }
+  if (hasWhitespace(username)) {
+    return NextResponse.json(
+      { error: "username cannot contain spaces." },
       { status: 400 },
     );
   }
@@ -39,6 +46,13 @@ export async function POST(request: Request) {
     }
 
     const trimmed = username.trim();
+    if (hasWhitespace(trimmed)) {
+      return NextResponse.json(
+        { error: "username cannot contain spaces." },
+        { status: 400 },
+      );
+    }
+
     const usernameKey = normalizeUsername(trimmed);
     const existing = await prisma.user.findUnique({
       where: { usernameKey },
@@ -63,4 +77,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unable to create user." }, { status: 500 });
   }
 }
-

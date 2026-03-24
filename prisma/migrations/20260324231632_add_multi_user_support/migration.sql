@@ -18,7 +18,7 @@ CREATE TABLE "User" (
 );
 
 INSERT INTO "User" ("id", "username", "usernameKey", "createdAt", "updatedAt")
-VALUES ("migrated-default-user", "Migrated User", "migrated-user", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ("migrated-default-user", "migratedUser", "migrateduser", CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- RedefineTables
 PRAGMA defer_foreign_keys=ON;
