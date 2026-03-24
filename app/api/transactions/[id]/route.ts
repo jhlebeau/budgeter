@@ -3,6 +3,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dateKey, generateRecurringDates, toUtcDateOnly } from "@/lib/recurring";
 import { requireUserId, userExists } from "@/lib/api-user";
+import {
+  DESCRIPTION_MAX_LENGTH,
+  isUuidLikeOrLegacyId,
+  isValidFiniteNumber,
+  MAX_MONEY_VALUE,
+  parseOptionalText,
+} from "@/lib/input-validation";
 
 type Scope = "THIS" | "FUTURE" | "ALL";
 
@@ -40,7 +47,10 @@ type UpdatePayload = {
 };
 
 const validateUpdatePayload = (body: UpdatePayload) => {
-  if (body.amount !== undefined && (typeof body.amount !== "number" || body.amount <= 0)) {
+  if (
+    body.amount !== undefined &&
+    !isValidFiniteNumber(body.amount, 0.01, MAX_MONEY_VALUE)
+  ) {
     return { error: "amount must be a positive number when provided.", status: 400 };
   }
 
@@ -53,21 +63,18 @@ const validateUpdatePayload = (body: UpdatePayload) => {
     parsedDate = toUtcDateOnly(parsedDateOrNull);
   }
 
-  if (
-    body.description !== undefined &&
-    body.description !== null &&
-    typeof body.description !== "string"
-  ) {
+  const parsedDescription =
+    body.description !== undefined
+      ? parseOptionalText(body.description, DESCRIPTION_MAX_LENGTH)
+      : undefined;
+  if (parsedDescription === null) {
     return {
-      error: "description must be a string or null when provided.",
+      error: "description must be a string up to 300 characters when provided.",
       status: 400,
     };
   }
 
-  if (
-    body.categoryId !== undefined &&
-    (typeof body.categoryId !== "string" || !body.categoryId.trim())
-  ) {
+  if (body.categoryId !== undefined && !isUuidLikeOrLegacyId(body.categoryId)) {
     return {
       error: "categoryId must be a non-empty string when provided.",
       status: 400,
@@ -89,6 +96,7 @@ const validateUpdatePayload = (body: UpdatePayload) => {
 
   return {
     parsedDate,
+    parsedDescription,
     parsedScope,
     parsedFrequency,
   };
@@ -135,7 +143,7 @@ export async function PATCH(
       return NextResponse.json({ error: validation.error }, { status: validation.status });
     }
 
-    const { parsedDate, parsedScope, parsedFrequency } = validation;
+    const { parsedDate, parsedDescription, parsedScope, parsedFrequency } = validation;
     const existing = await prisma.transaction.findUnique({
       where: { id },
       include: { recurringSeries: true },
@@ -148,7 +156,9 @@ export async function PATCH(
     const nextAmount = body.amount !== undefined ? (body.amount as number) : existing.amount;
     const nextDate = parsedDate ?? toUtcDateOnly(existing.date);
     const nextDescription =
-      body.description !== undefined ? (body.description as string | null) : existing.description;
+      parsedDescription !== undefined
+        ? parsedDescription || null
+        : existing.description;
     const nextCategoryId =
       body.categoryId !== undefined ? (body.categoryId as string) : existing.categoryId;
 

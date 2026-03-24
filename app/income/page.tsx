@@ -215,6 +215,7 @@ export default function IncomePage() {
           onChange={(event) =>
             setForm((current) => ({ ...current, source: event.target.value }))
           }
+          maxLength={80}
           className="w-full rounded border px-3 py-2"
           required
         />
@@ -356,6 +357,7 @@ export default function IncomePage() {
                         source: event.target.value,
                       }))
                     }
+                    maxLength={80}
                     className="w-full rounded border px-3 py-2"
                   />
                   <div className="relative">

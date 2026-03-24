@@ -26,8 +26,12 @@ export default function LoginPage() {
       setError("Please enter a username.");
       return;
     }
-    if (/\s/.test(trimmed)) {
-      setError("Username cannot contain spaces.");
+    if (!/^[A-Za-z0-9]+$/.test(trimmed)) {
+      setError("Username must be alphanumeric only.");
+      return;
+    }
+    if (trimmed.length > 32) {
+      setError("Username must be 32 characters or fewer.");
       return;
     }
 
@@ -80,8 +84,9 @@ export default function LoginPage() {
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           className="w-full rounded border px-3 py-2"
-          pattern="^\S+$"
-          title="Username cannot contain spaces."
+          pattern="^[A-Za-z0-9]+$"
+          title="Username must contain only letters and numbers."
+          maxLength={32}
           required
         />
         <div className="flex gap-2">

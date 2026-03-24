@@ -98,6 +98,7 @@ export default function SavingsCategoriesPage() {
           placeholder="Category name"
           value={newCategory}
           onChange={(event) => setNewCategory(event.target.value)}
+          maxLength={60}
           className="w-full rounded border px-3 py-2"
           required
         />
@@ -177,6 +178,7 @@ export default function SavingsCategoriesPage() {
                       type="text"
                       value={editingName}
                       onChange={(event) => setEditingName(event.target.value)}
+                      maxLength={60}
                       className="rounded border px-3 py-1.5"
                     />
                     <select

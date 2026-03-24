@@ -3,6 +3,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dateKey, generateRecurringDates, toUtcDateOnly } from "@/lib/recurring";
 import { requireUserId, userExists } from "@/lib/api-user";
+import {
+  DESCRIPTION_MAX_LENGTH,
+  isUuidLikeOrLegacyId,
+  isValidFiniteNumber,
+  MAX_MONEY_VALUE,
+  parseOptionalText,
+} from "@/lib/input-validation";
 
 const parseDate = (value: unknown) => {
   if (typeof value !== "string" && !(value instanceof Date)) return null;
@@ -85,15 +92,12 @@ export async function POST(request: Request) {
     } = body;
 
     const parsedDate = parseDate(date);
+    const parsedDescription = parseOptionalText(description, DESCRIPTION_MAX_LENGTH);
     if (
-      typeof amount !== "number" ||
-      amount <= 0 ||
+      !isValidFiniteNumber(amount, 0.01, MAX_MONEY_VALUE) ||
       !parsedDate ||
-      (description !== undefined &&
-        description !== null &&
-        typeof description !== "string") ||
-      typeof categoryId !== "string" ||
-      !categoryId.trim()
+      parsedDescription === null ||
+      !isUuidLikeOrLegacyId(categoryId)
     ) {
       return NextResponse.json(
         {
@@ -154,7 +158,7 @@ export async function POST(request: Request) {
             frequency: parsedFrequency,
             startDate: normalizedDate,
             amount,
-            description: typeof description === "string" ? description : null,
+            description: parsedDescription || null,
             categoryId,
             userId,
           },
@@ -166,7 +170,7 @@ export async function POST(request: Request) {
               data: {
                 amount,
                 date: occurrenceDate,
-                description: typeof description === "string" ? description : null,
+                description: parsedDescription || null,
                 categoryId,
                 userId,
                 recurringSeriesId: series.id,
@@ -187,7 +191,7 @@ export async function POST(request: Request) {
         data: {
           amount,
           date: normalizedDate,
-          description: typeof description === "string" ? description : null,
+          description: parsedDescription || null,
           categoryId,
           userId,
         },

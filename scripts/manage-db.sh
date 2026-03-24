@@ -31,7 +31,7 @@ Commands:
 Options:
   --id <user-id>             Target a user by ID. Repeat for multiple users.
   --username <username>      Target a user by username (case-insensitive).
-                             Repeat for multiple users. Spaces are not allowed.
+                             Repeat for multiple users. Alphanumeric only.
   --all                      Target all users.
   --db <path>                SQLite database path (default: ./dev.db)
   --help                     Show this help text.
@@ -83,8 +83,8 @@ while [[ $# -gt 0 ]]; do
         echo "--username requires a value." >&2
         exit 1
       fi
-      if [[ "$2" =~ [[:space:]] ]]; then
-        echo "Usernames cannot contain spaces: '$2'" >&2
+      if [[ ! "$2" =~ ^[A-Za-z0-9]+$ ]]; then
+        echo "Username must be alphanumeric only: '$2'" >&2
         exit 1
       fi
       USERNAMES+=("$2")

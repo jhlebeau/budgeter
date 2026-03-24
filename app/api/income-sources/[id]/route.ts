@@ -2,9 +2,17 @@ import { Frequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
+import {
+  isValidFiniteNumber,
+  MAX_MONEY_VALUE,
+  NAME_MAX_LENGTH,
+  parseRequiredText,
+} from "@/lib/input-validation";
 
 const isFrequency = (value: unknown): value is Frequency =>
   value === "MONTHLY" || value === "ANNUAL";
+const isTaxState = (value: unknown): value is "CA" | "TX" | "MA" =>
+  value === "CA" || value === "TX" || value === "MA";
 
 export async function GET(
   request: Request,
@@ -57,15 +65,15 @@ export async function PATCH(
       taxState?: unknown;
     } = body;
 
-    if (name !== undefined && (typeof name !== "string" || !name.trim())) {
+    if (name !== undefined && !parseRequiredText(name, NAME_MAX_LENGTH)) {
       return NextResponse.json(
-        { error: "name must be a non-empty string when provided." },
+        { error: "name must be a non-empty string up to 80 chars." },
         { status: 400 },
       );
     }
-    if (amount !== undefined && (typeof amount !== "number" || amount <= 0)) {
+    if (amount !== undefined && !isValidFiniteNumber(amount, 0.01, MAX_MONEY_VALUE)) {
       return NextResponse.json(
-        { error: "amount must be a positive number when provided." },
+        { error: "amount must be between 0.01 and 1,000,000,000." },
         { status: 400 },
       );
     }
@@ -81,15 +89,15 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    if (taxRate !== undefined && (typeof taxRate !== "number" || taxRate < 0)) {
+    if (taxRate !== undefined && !isValidFiniteNumber(taxRate, 0, 100)) {
       return NextResponse.json(
-        { error: "taxRate must be a positive number when provided." },
+        { error: "taxRate must be between 0 and 100 when provided." },
         { status: 400 },
       );
     }
-    if (taxState !== undefined && typeof taxState !== "string") {
+    if (taxState !== undefined && !isTaxState(taxState)) {
       return NextResponse.json(
-        { error: "taxState must be a string when provided." },
+        { error: "taxState must be one of: CA, TX, MA when provided." },
         { status: 400 },
       );
     }
@@ -99,13 +107,14 @@ export async function PATCH(
       return NextResponse.json({ error: "Income source not found." }, { status: 404 });
     }
 
+    const parsedName = name !== undefined ? parseRequiredText(name, NAME_MAX_LENGTH) : undefined;
     const nextIsPreTax =
       typeof isPreTax === "boolean" ? isPreTax : current.isPreTax;
 
     const incomeSource = await prisma.incomeSource.update({
       where: { id },
       data: {
-        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(parsedName ? { name: parsedName } : {}),
         ...(amount !== undefined ? { amount } : {}),
         ...(frequency !== undefined ? { frequency } : {}),
         ...(isPreTax !== undefined ? { isPreTax } : {}),

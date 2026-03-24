@@ -2,6 +2,12 @@ import { LimitType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  isValidFiniteNumber,
+  MAX_MONEY_VALUE,
+  parseRequiredText,
+} from "@/lib/input-validation";
 
 const isLimitType = (value: unknown): value is LimitType =>
   value === "AMOUNT" || value === "PERCENT";
@@ -52,9 +58,9 @@ export async function PATCH(
       limitValue?: unknown;
     } = body;
 
-    if (name !== undefined && (typeof name !== "string" || !name.trim())) {
+    if (name !== undefined && !parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH)) {
       return NextResponse.json(
-        { error: "name must be a non-empty string when provided." },
+        { error: "name must be a non-empty string up to 60 chars." },
         { status: 400 },
       );
     }
@@ -66,7 +72,8 @@ export async function PATCH(
     }
     if (
       limitValue !== undefined &&
-      (typeof limitValue !== "number" || limitValue <= 0)
+      (!isValidFiniteNumber(limitValue, 0.01, MAX_MONEY_VALUE) ||
+        (limitType === "PERCENT" && limitValue > 10_000))
     ) {
       return NextResponse.json(
         { error: "limitValue must be a positive number when provided." },
@@ -83,11 +90,21 @@ export async function PATCH(
         { status: 404 },
       );
     }
+    const nextLimitType = (limitType ?? existing.limitType) as LimitType;
+    if (limitValue !== undefined && nextLimitType === "PERCENT" && limitValue > 10_000) {
+      return NextResponse.json(
+        { error: "Percent limit must be <= 10,000." },
+        { status: 400 },
+      );
+    }
+
+    const parsedName =
+      name !== undefined ? parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH) : undefined;
 
     const category = await prisma.savingCategory.update({
       where: { id },
       data: {
-        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(parsedName ? { name: parsedName } : {}),
         ...(limitType !== undefined ? { limitType } : {}),
         ...(limitValue !== undefined ? { limitValue } : {}),
       },

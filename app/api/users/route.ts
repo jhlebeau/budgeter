@@ -1,26 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const normalizeUsername = (value: string) => value.trim().toLowerCase();
-const hasWhitespace = (value: string) => /\s/.test(value);
+import {
+  isValidUsername,
+  normalizeUsername,
+  parseRequiredText,
+  USERNAME_MAX_LENGTH,
+} from "@/lib/input-validation";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const username = searchParams.get("username");
-  if (!username || !username.trim()) {
+  const parsedUsername = parseRequiredText(username, USERNAME_MAX_LENGTH);
+  if (!parsedUsername) {
     return NextResponse.json(
       { error: "username query param is required." },
       { status: 400 },
     );
   }
-  if (hasWhitespace(username)) {
+  if (!isValidUsername(parsedUsername)) {
     return NextResponse.json(
-      { error: "username cannot contain spaces." },
+      { error: "username must be alphanumeric only." },
       { status: 400 },
     );
   }
 
-  const usernameKey = normalizeUsername(username);
+  const usernameKey = normalizeUsername(parsedUsername);
   const user = await prisma.user.findUnique({
     where: { usernameKey },
     select: { id: true, username: true },
@@ -38,17 +42,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { username }: { username?: unknown } = body;
 
-    if (typeof username !== "string" || !username.trim()) {
+    const trimmed = parseRequiredText(username, USERNAME_MAX_LENGTH);
+    if (!trimmed) {
       return NextResponse.json(
         { error: "username is required." },
         { status: 400 },
       );
     }
-
-    const trimmed = username.trim();
-    if (hasWhitespace(trimmed)) {
+    if (!isValidUsername(trimmed)) {
       return NextResponse.json(
-        { error: "username cannot contain spaces." },
+        { error: "username must be alphanumeric only." },
         { status: 400 },
       );
     }

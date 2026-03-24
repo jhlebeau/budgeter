@@ -161,6 +161,7 @@ export default function TransactionsPage() {
           onChange={(event) =>
             setForm((current) => ({ ...current, note: event.target.value }))
           }
+          maxLength={300}
           className="w-full rounded border px-3 py-2"
           rows={3}
         />
@@ -269,6 +270,7 @@ export default function TransactionsPage() {
                         note: event.target.value,
                       }))
                     }
+                    maxLength={300}
                     className="w-full rounded border px-3 py-2"
                     rows={3}
                   />

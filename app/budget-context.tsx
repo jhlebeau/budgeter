@@ -189,20 +189,7 @@ const toTransaction = (transaction: ApiTransaction): Transaction => ({
 });
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUserState] = useState<AppUser | null>(() => {
-    if (typeof window === "undefined") return null;
-    const rawUser = window.localStorage.getItem("budget-tracker-user");
-    if (!rawUser) return null;
-    try {
-      const parsed = JSON.parse(rawUser) as AppUser;
-      if (parsed.id && parsed.username) {
-        return parsed;
-      }
-    } catch {
-      window.localStorage.removeItem("budget-tracker-user");
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUserState] = useState<AppUser | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingCategories, setSavingCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -214,11 +201,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     setTransactions([]);
     setIncomes([]);
     setCurrentUserState(user);
-    if (user) {
-      window.localStorage.setItem("budget-tracker-user", JSON.stringify(user));
-      return;
-    }
-    window.localStorage.removeItem("budget-tracker-user");
   };
 
   const authFetch = useCallback(async (url: string, init?: RequestInit) => {

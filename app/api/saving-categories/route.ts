@@ -2,6 +2,12 @@ import { LimitType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  isValidFiniteNumber,
+  MAX_MONEY_VALUE,
+  parseRequiredText,
+} from "@/lib/input-validation";
 
 const isLimitType = (value: unknown): value is LimitType =>
   value === "AMOUNT" || value === "PERCENT";
@@ -39,12 +45,13 @@ export async function POST(request: Request) {
       limitValue?: unknown;
     } = body;
 
+    const parsedName = parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH);
+
     if (
-      typeof name !== "string" ||
-      !name.trim() ||
+      !parsedName ||
       !isLimitType(limitType) ||
-      typeof limitValue !== "number" ||
-      limitValue <= 0
+      !isValidFiniteNumber(limitValue, 0.01, MAX_MONEY_VALUE) ||
+      (limitType === "PERCENT" && limitValue > 10_000)
     ) {
       return NextResponse.json(
         {
@@ -57,7 +64,7 @@ export async function POST(request: Request) {
 
     const category = await prisma.savingCategory.create({
       data: {
-        name: name.trim(),
+        name: parsedName,
         userId,
         limitType,
         limitValue,
