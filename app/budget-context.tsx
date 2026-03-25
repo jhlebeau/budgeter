@@ -125,6 +125,41 @@ type BudgetContextValue = {
 
 const BudgetContext = createContext<BudgetContextValue | null>(null);
 
+const getSafeCreateErrorMessage = (
+  operation:
+    | "spending-category"
+    | "saving-category"
+    | "transaction"
+    | "income-source",
+  status?: number,
+) => {
+  if (operation === "spending-category") {
+    if (status === 400) {
+      return "Unable to create spending category. Please review the name and limit.";
+    }
+    return "Unable to create spending category right now.";
+  }
+
+  if (operation === "saving-category") {
+    if (status === 400) {
+      return "Unable to create savings category. Please review the name and limit.";
+    }
+    return "Unable to create savings category right now.";
+  }
+
+  if (operation === "transaction") {
+    if (status === 400) {
+      return "Unable to create transaction. Please review the amount, date, and category.";
+    }
+    return "Unable to create transaction right now.";
+  }
+
+  if (status === 400) {
+    return "Unable to create income source. Please review the name, amount, and tax settings.";
+  }
+  return "Unable to create income source right now.";
+};
+
 type ApiIncome = {
   id: string;
   name: string;
@@ -350,12 +385,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         limitValue,
       }),
     });
-    if (!response) return "Unable to create spending category.";
+    if (!response) return getSafeCreateErrorMessage("spending-category");
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      return payload?.error ?? "Unable to create spending category.";
+      return getSafeCreateErrorMessage("spending-category", response.status);
     }
 
     const created = (await response.json()) as ApiCategory;
@@ -443,12 +475,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         limitValue,
       }),
     });
-    if (!response) return "Unable to create savings category.";
+    if (!response) return getSafeCreateErrorMessage("saving-category");
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      return payload?.error ?? "Unable to create savings category.";
+      return getSafeCreateErrorMessage("saving-category", response.status);
     }
 
     const created = (await response.json()) as ApiSavingCategory;
@@ -518,12 +547,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
       }),
     });
-    if (!response) return "Unable to create transaction.";
+    if (!response) return getSafeCreateErrorMessage("transaction");
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      return payload?.error ?? "Unable to create transaction.";
+      return getSafeCreateErrorMessage("transaction", response.status);
     }
     await refreshTransactions();
     return null;
@@ -602,12 +628,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify(incomePayload),
     });
-    if (!response) return "Unable to create income source.";
+    if (!response) return getSafeCreateErrorMessage("income-source");
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      return payload?.error ?? "Unable to create income source.";
+      return getSafeCreateErrorMessage("income-source", response.status);
     }
 
     const created = (await response.json()) as ApiIncome;
