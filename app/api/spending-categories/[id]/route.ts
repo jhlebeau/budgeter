@@ -75,11 +75,11 @@ export async function PATCH(
     }
     if (
       limitValue !== undefined &&
-      (!isValidFiniteNumber(limitValue, 0.01, MAX_MONEY_VALUE) ||
+      (!isValidFiniteNumber(limitValue, 0, MAX_MONEY_VALUE) ||
         (limitType === "PERCENT" && limitValue > 10_000))
     ) {
       return NextResponse.json(
-        { error: "limitValue must be a positive number when provided." },
+        { error: "limitValue must be a non-negative number when provided." },
         { status: 400 },
       );
     }

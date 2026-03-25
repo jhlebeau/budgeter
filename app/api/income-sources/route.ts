@@ -2,6 +2,7 @@ import { Frequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
+import { TAX_STATES, TaxStateCode } from "@/lib/tax-states";
 import {
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
@@ -11,8 +12,8 @@ import {
 
 const isFrequency = (value: unknown): value is Frequency =>
   value === "MONTHLY" || value === "ANNUAL";
-const isTaxState = (value: unknown): value is "CA" | "TX" | "MA" =>
-  value === "CA" || value === "TX" || value === "MA";
+const isTaxState = (value: unknown): value is TaxStateCode =>
+  typeof value === "string" && TAX_STATES.includes(value as TaxStateCode);
 
 export async function GET(request: Request) {
   const { userId, errorResponse } = requireUserId(request);
@@ -57,14 +58,14 @@ export async function POST(request: Request) {
 
     if (
       !parsedName ||
-      !isValidFiniteNumber(amount, 0.01, MAX_MONEY_VALUE) ||
+      !isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE) ||
       !isFrequency(frequency) ||
       typeof isPreTax !== "boolean"
     ) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. Required: name, amount (>0), frequency (MONTHLY|ANNUAL), isPreTax.",
+            "Invalid payload. Required: name, amount (>=0), frequency (MONTHLY|ANNUAL), isPreTax.",
         },
         { status: 400 },
       );
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
 
     if (taxState !== undefined && !isTaxState(taxState)) {
       return NextResponse.json(
-        { error: "taxState must be one of: CA, TX, MA when provided." },
+        { error: "taxState is invalid." },
         { status: 400 },
       );
     }
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
         isPreTax,
         userId,
         taxRate: isPreTax ? (taxRate as number | undefined) : null,
-        taxState: isPreTax ? (taxState as "CA" | "TX" | "MA" | undefined) : null,
+        taxState: isPreTax ? (taxState as TaxStateCode | undefined) : null,
       },
     });
 

@@ -8,6 +8,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { TaxStateCode } from "@/lib/tax-states";
 
 export type Category = {
   id: string;
@@ -49,7 +50,7 @@ export type Income = {
   amount: number;
   taxType: "pre" | "post";
   taxMethod: "manual" | "auto";
-  taxState: "CA" | "TX" | "MA" | null;
+  taxState: TaxStateCode | null;
   taxRate: number;
   postTaxAmount: number;
 };
@@ -59,7 +60,7 @@ export type IncomeInput = {
   amount: number;
   taxType: "pre" | "post";
   taxMethod: "manual" | "auto";
-  taxState: "CA" | "TX" | "MA" | null;
+  taxState: TaxStateCode | null;
   taxRate: number;
 };
 
@@ -116,7 +117,7 @@ type ApiIncome = {
   frequency: "MONTHLY" | "ANNUAL";
   isPreTax: boolean;
   taxRate: number | null;
-  taxState: "CA" | "TX" | "MA" | null;
+  taxState: TaxStateCode | null;
 };
 
 type ApiCategory = {
@@ -282,7 +283,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     limitValue: number,
   ) => {
     const nextName = name.trim();
-    if (!nextName || limitValue <= 0) return false;
+    if (!nextName || limitValue < 0) return false;
 
     const exists = categories.some(
       (category) => category.name.toLowerCase() === nextName.toLowerCase(),
@@ -309,7 +310,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     limitType: "amount" | "percent",
     limitValue: number,
   ) => {
-    if (limitValue <= 0) return;
+    if (limitValue < 0) return;
 
     const response = await authFetch(`/api/spending-categories/${id}`, {
       method: "PATCH",
@@ -368,7 +369,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     limitValue: number,
   ) => {
     const nextName = name.trim();
-    if (!nextName || limitValue <= 0) return false;
+    if (!nextName || limitValue < 0) return false;
 
     const exists = savingCategories.some(
       (category) => category.name.toLowerCase() === nextName.toLowerCase(),
@@ -395,7 +396,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     limitType: "amount" | "percent",
     limitValue: number,
   ) => {
-    if (limitValue <= 0) return;
+    if (limitValue < 0) return;
 
     const response = await authFetch(`/api/saving-categories/${id}`, {
       method: "PATCH",
@@ -495,7 +496,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       frequency: "MONTHLY";
       isPreTax: boolean;
       taxRate?: number;
-      taxState?: "CA" | "TX" | "MA";
+      taxState?: TaxStateCode;
     } = {
       name: income.source,
       amount: income.amount,
@@ -527,7 +528,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       frequency: "MONTHLY";
       isPreTax: boolean;
       taxRate?: number;
-      taxState?: "CA" | "TX" | "MA";
+      taxState?: TaxStateCode;
     } = {
       name: income.source,
       amount: income.amount,

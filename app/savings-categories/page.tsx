@@ -120,8 +120,8 @@ export default function SavingsCategoriesPage() {
           ) : null}
           <input
             type="number"
-            step="0.01"
-            min="0.01"
+            step="0"
+            min="0"
             placeholder={
               newLimitType === "amount"
                 ? "Monthly savings target"
@@ -201,8 +201,8 @@ export default function SavingsCategoriesPage() {
                       ) : null}
                       <input
                         type="number"
-                        step="0.01"
-                        min="0.01"
+                        step="0"
+                        min="0"
                         value={editingLimit}
                         onChange={(event) => setEditingLimit(event.target.value)}
                         className={`rounded border py-1.5 pr-3 ${

@@ -137,6 +137,7 @@ export default function TransactionsPage() {
           <input
             type="number"
             step="0.01"
+            min="0"
             placeholder="Amount"
             value={form.amount}
             onChange={(event) =>
@@ -238,6 +239,7 @@ export default function TransactionsPage() {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       value={editForm.amount}
                       onChange={(event) =>
                         setEditForm((current) => ({

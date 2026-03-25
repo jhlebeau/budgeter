@@ -2,6 +2,7 @@ import { Frequency } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
+import { TAX_STATES, TaxStateCode } from "@/lib/tax-states";
 import {
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
@@ -11,8 +12,8 @@ import {
 
 const isFrequency = (value: unknown): value is Frequency =>
   value === "MONTHLY" || value === "ANNUAL";
-const isTaxState = (value: unknown): value is "CA" | "TX" | "MA" =>
-  value === "CA" || value === "TX" || value === "MA";
+const isTaxState = (value: unknown): value is TaxStateCode =>
+  typeof value === "string" && TAX_STATES.includes(value as TaxStateCode);
 
 export async function GET(
   request: Request,
@@ -71,9 +72,9 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    if (amount !== undefined && !isValidFiniteNumber(amount, 0.01, MAX_MONEY_VALUE)) {
+    if (amount !== undefined && !isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE)) {
       return NextResponse.json(
-        { error: "amount must be between 0.01 and 1,000,000,000." },
+        { error: "amount must be between 0 and 1,000,000,000." },
         { status: 400 },
       );
     }
@@ -97,7 +98,7 @@ export async function PATCH(
     }
     if (taxState !== undefined && !isTaxState(taxState)) {
       return NextResponse.json(
-        { error: "taxState must be one of: CA, TX, MA when provided." },
+        { error: "taxState is invalid." },
         { status: 400 },
       );
     }

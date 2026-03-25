@@ -49,9 +49,9 @@ type UpdatePayload = {
 const validateUpdatePayload = (body: UpdatePayload) => {
   if (
     body.amount !== undefined &&
-    !isValidFiniteNumber(body.amount, 0.01, MAX_MONEY_VALUE)
+    !isValidFiniteNumber(body.amount, 0, MAX_MONEY_VALUE)
   ) {
-    return { error: "amount must be a positive number when provided.", status: 400 };
+    return { error: "amount must be a non-negative number when provided.", status: 400 };
   }
 
   let parsedDate: Date | undefined;

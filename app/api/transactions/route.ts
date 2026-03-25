@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     const parsedDate = parseDate(date);
     const parsedDescription = parseOptionalText(description, DESCRIPTION_MAX_LENGTH);
     if (
-      !isValidFiniteNumber(amount, 0.01, MAX_MONEY_VALUE) ||
+      !isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE) ||
       !parsedDate ||
       parsedDescription === null ||
       !isUuidLikeOrLegacyId(categoryId)
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. Required: amount (>0), date, categoryId. Optional: description.",
+            "Invalid payload. Required: amount (>=0), date, categoryId. Optional: description.",
         },
         { status: 400 },
       );

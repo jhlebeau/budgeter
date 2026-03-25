@@ -50,13 +50,13 @@ export async function POST(request: Request) {
     if (
       !parsedName ||
       !isLimitType(limitType) ||
-      !isValidFiniteNumber(limitValue, 0.01, MAX_MONEY_VALUE) ||
+      !isValidFiniteNumber(limitValue, 0, MAX_MONEY_VALUE) ||
       (limitType === "PERCENT" && limitValue > 10_000)
     ) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. Required: name, limitType (AMOUNT|PERCENT), limitValue (>0).",
+            "Invalid payload. Required: name, limitType (AMOUNT|PERCENT), limitValue (>=0).",
         },
         { status: 400 },
       );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Income, useBudget } from "../budget-context";
+import { NO_STATE_INCOME_TAX_STATES, TaxStateCode } from "@/lib/tax-states";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -34,7 +35,21 @@ const CALIFORNIA_BRACKETS_ESTIMATE = [
   { max: Number.POSITIVE_INFINITY, rate: 0.133 },
 ];
 
-type TaxState = "CA" | "TX" | "MA";
+type TaxState = TaxStateCode;
+
+const TAX_STATE_OPTIONS: Array<{ code: TaxState; label: string }> = [
+  { code: "AK", label: "Alaska" },
+  { code: "CA", label: "California" },
+  { code: "FL", label: "Florida" },
+  { code: "MA", label: "Massachusetts" },
+  { code: "NV", label: "Nevada" },
+  { code: "NH", label: "New Hampshire" },
+  { code: "SD", label: "South Dakota" },
+  { code: "TN", label: "Tennessee" },
+  { code: "TX", label: "Texas" },
+  { code: "WA", label: "Washington" },
+  { code: "WY", label: "Wyoming" },
+];
 
 type IncomeForm = {
   source: string;
@@ -82,7 +97,7 @@ const calculateFederalTax2026Single = (annualIncome: number) => {
 };
 
 const calculateStateTax = (annualIncome: number, taxState: TaxState) => {
-  if (taxState === "TX") return 0;
+  if (NO_STATE_INCOME_TAX_STATES.has(taxState)) return 0;
   if (taxState === "MA") return annualIncome * 0.05;
   return calculateProgressiveTax(annualIncome, CALIFORNIA_BRACKETS_ESTIMATE);
 };
@@ -311,9 +326,11 @@ export default function IncomePage() {
                   }
                   className="w-full rounded border px-3 py-2"
                 >
-                  <option value="CA">California</option>
-                  <option value="TX">Texas</option>
-                  <option value="MA">Massachusetts</option>
+                  {TAX_STATE_OPTIONS.map((state) => (
+                    <option key={state.code} value={state.code}>
+                      {state.label}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-sm text-zinc-700">
                   Estimated combined tax rate (federal + state):{" "}
@@ -433,9 +450,11 @@ export default function IncomePage() {
                             }
                             className="w-full rounded border px-3 py-2"
                           >
-                            <option value="CA">California</option>
-                            <option value="TX">Texas</option>
-                            <option value="MA">Massachusetts</option>
+                            {TAX_STATE_OPTIONS.map((state) => (
+                              <option key={state.code} value={state.code}>
+                                {state.label}
+                              </option>
+                            ))}
                           </select>
                           <p className="text-sm text-zinc-700">
                             Estimated combined tax rate (federal + state):{" "}
