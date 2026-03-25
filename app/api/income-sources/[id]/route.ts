@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
 import { TAX_STATES, TaxStateCode } from "@/lib/tax-states";
+import { isValidMonthKey } from "@/lib/month-utils";
 import {
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
@@ -54,6 +55,8 @@ export async function PATCH(
       name,
       amount,
       frequency,
+      startMonth,
+      endMonth,
       isPreTax,
       taxRate,
       taxState,
@@ -61,6 +64,8 @@ export async function PATCH(
       name?: unknown;
       amount?: unknown;
       frequency?: unknown;
+      startMonth?: unknown;
+      endMonth?: unknown;
       isPreTax?: unknown;
       taxRate?: unknown;
       taxState?: unknown;
@@ -81,6 +86,22 @@ export async function PATCH(
     if (frequency !== undefined && !isFrequency(frequency)) {
       return NextResponse.json(
         { error: "frequency must be MONTHLY or ANNUAL when provided." },
+        { status: 400 },
+      );
+    }
+    if (startMonth !== undefined && !isValidMonthKey(startMonth)) {
+      return NextResponse.json(
+        { error: "startMonth must be in YYYY-MM format when provided." },
+        { status: 400 },
+      );
+    }
+    if (
+      endMonth !== undefined &&
+      endMonth !== null &&
+      !isValidMonthKey(endMonth)
+    ) {
+      return NextResponse.json(
+        { error: "endMonth must be null or YYYY-MM when provided." },
         { status: 400 },
       );
     }
@@ -109,6 +130,17 @@ export async function PATCH(
     }
 
     const parsedName = name !== undefined ? parseRequiredText(name, NAME_MAX_LENGTH) : undefined;
+    const nextStartMonth =
+      startMonth !== undefined ? (startMonth as string) : current.startMonth;
+    const nextEndMonth =
+      endMonth !== undefined ? (endMonth as string | null) : current.endMonth;
+
+    if (nextEndMonth && nextEndMonth < nextStartMonth) {
+      return NextResponse.json(
+        { error: "endMonth cannot be earlier than startMonth." },
+        { status: 400 },
+      );
+    }
     const nextIsPreTax =
       typeof isPreTax === "boolean" ? isPreTax : current.isPreTax;
 
@@ -118,6 +150,8 @@ export async function PATCH(
         ...(parsedName ? { name: parsedName } : {}),
         ...(amount !== undefined ? { amount } : {}),
         ...(frequency !== undefined ? { frequency } : {}),
+        ...(startMonth !== undefined ? { startMonth } : {}),
+        ...(endMonth !== undefined ? { endMonth } : {}),
         ...(isPreTax !== undefined ? { isPreTax } : {}),
         ...(nextIsPreTax
           ? {

@@ -9,6 +9,7 @@ import {
   TAX_STATE_LABELS,
   TaxStateCode,
 } from "@/lib/tax-states";
+import { getCurrentMonthKey } from "@/lib/month-utils";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -141,6 +142,9 @@ type IncomeForm = {
   source: string;
   amount: string;
   period: "monthly" | "annual";
+  startMonth: string;
+  hasEndMonth: boolean;
+  endMonth: string;
   taxType: "pre" | "post";
   taxMethod: "manual" | "auto";
   taxState: TaxState;
@@ -151,6 +155,9 @@ const emptyForm: IncomeForm = {
   source: "",
   amount: "",
   period: "monthly",
+  startMonth: "",
+  hasEndMonth: false,
+  endMonth: "",
   taxType: "post",
   taxMethod: "manual",
   taxState: "TX",
@@ -234,8 +241,11 @@ const getAutoTaxBreakdown = (annualAmount: number, taxState: TaxState) => {
 
 const toEditForm = (income: Income): IncomeForm => ({
   source: income.source,
-  amount: String(income.amount),
-  period: "monthly",
+  amount: String(income.inputAmount),
+  period: income.period,
+  startMonth: income.startMonth,
+  hasEndMonth: income.endMonth !== null,
+  endMonth: income.endMonth ?? "",
   taxType: income.taxType,
   taxMethod: income.taxMethod,
   taxState: income.taxState ?? "TX",
@@ -244,7 +254,10 @@ const toEditForm = (income: Income): IncomeForm => ({
 
 export default function IncomePage() {
   const { incomes, addIncome, updateIncome, deleteIncome } = useBudget();
-  const [form, setForm] = useState<IncomeForm>(emptyForm);
+  const [form, setForm] = useState<IncomeForm>(() => ({
+    ...emptyForm,
+    startMonth: getCurrentMonthKey(),
+  }));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<IncomeForm>(emptyForm);
 
@@ -279,17 +292,23 @@ export default function IncomePage() {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const startMonth = form.startMonth || getCurrentMonthKey();
+    const endMonth = form.hasEndMonth ? form.endMonth || null : null;
+    if (endMonth && endMonth < startMonth) return;
 
     await addIncome({
       source: form.source,
-      amount: monthlyAmount,
+      amount: form.period === "annual" ? annualAmount : monthlyAmount,
+      period: form.period,
+      startMonth,
+      endMonth,
       taxType: form.taxType,
       taxMethod: form.taxType === "pre" ? form.taxMethod : "manual",
       taxState: form.taxType === "pre" && form.taxMethod === "auto" ? form.taxState : null,
       taxRate: form.taxType === "pre" ? effectiveTaxRate : 0,
     });
 
-    setForm(emptyForm);
+    setForm({ ...emptyForm, startMonth: getCurrentMonthKey() });
   };
 
   const startEdit = (income: Income) => {
@@ -300,7 +319,10 @@ export default function IncomePage() {
   const saveEdit = async () => {
     if (editingId === null) return;
 
-    const monthlyEditAmount = Number(editForm.amount) || 0;
+    const monthlyEditAmount =
+      editForm.period === "annual"
+        ? (Number(editForm.amount) || 0) / 12
+        : Number(editForm.amount) || 0;
     const annualEditAmount = monthlyEditAmount * 12;
     const editAutoRate = getEffectiveTaxRate(annualEditAmount, editForm);
     const editEffectiveRate =
@@ -312,7 +334,10 @@ export default function IncomePage() {
 
     await updateIncome(editingId, {
       source: editForm.source,
-      amount: monthlyEditAmount,
+      amount: editForm.period === "annual" ? annualEditAmount : monthlyEditAmount,
+      period: editForm.period,
+      startMonth: editForm.startMonth,
+      endMonth: editForm.hasEndMonth ? editForm.endMonth || null : null,
       taxType: editForm.taxType,
       taxMethod: editForm.taxType === "pre" ? editForm.taxMethod : "manual",
       taxState:
@@ -363,6 +388,46 @@ export default function IncomePage() {
           <option value="monthly">Monthly amount</option>
           <option value="annual">Annual amount</option>
         </select>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Start Month</label>
+          <input
+            type="month"
+            value={form.startMonth}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, startMonth: event.target.value }))
+            }
+            className="w-full rounded border px-3 py-2"
+            required
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.hasEndMonth}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                hasEndMonth: event.target.checked,
+                endMonth: event.target.checked ? current.endMonth : "",
+              }))
+            }
+          />
+          Add end month
+        </label>
+        {form.hasEndMonth ? (
+          <div>
+            <label className="mb-1 block text-sm font-medium">End Month</label>
+            <input
+              type="month"
+              value={form.endMonth}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, endMonth: event.target.value }))
+              }
+              className="w-full rounded border px-3 py-2"
+              min={form.startMonth}
+            />
+          </div>
+        ) : null}
         <div className="relative">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
             $
@@ -517,6 +582,19 @@ export default function IncomePage() {
                     />
                   </div>
                   <select
+                    value={editForm.period}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        period: event.target.value as "monthly" | "annual",
+                      }))
+                    }
+                    className="w-full rounded border px-3 py-2"
+                  >
+                    <option value="monthly">Monthly amount</option>
+                    <option value="annual">Annual amount</option>
+                  </select>
+                  <select
                     value={editForm.taxType}
                     onChange={(event) =>
                       setEditForm((current) => ({
@@ -529,6 +607,52 @@ export default function IncomePage() {
                     <option value="post">Post-tax income</option>
                     <option value="pre">Pre-tax income</option>
                   </select>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Start Month</label>
+                    <input
+                      type="month"
+                      value={editForm.startMonth}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          startMonth: event.target.value,
+                        }))
+                      }
+                      className="w-full rounded border px-3 py-2"
+                      required
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={editForm.hasEndMonth}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          hasEndMonth: event.target.checked,
+                          endMonth: event.target.checked ? current.endMonth : "",
+                        }))
+                      }
+                    />
+                    Add end month
+                  </label>
+                  {editForm.hasEndMonth ? (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">End Month</label>
+                      <input
+                        type="month"
+                        value={editForm.endMonth}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            endMonth: event.target.value,
+                          }))
+                        }
+                        className="w-full rounded border px-3 py-2"
+                        min={editForm.startMonth}
+                      />
+                    </div>
+                  ) : null}
                   {editForm.taxType === "pre" ? (
                     <>
                       <select
@@ -580,7 +704,9 @@ export default function IncomePage() {
                           <p className="text-sm text-zinc-700">
                             Estimated combined tax rate (federal + state):{" "}
                             {getAutoTaxBreakdown(
-                              (Number(editForm.amount) || 0) * 12,
+                              editForm.period === "annual"
+                                ? Number(editForm.amount) || 0
+                                : (Number(editForm.amount) || 0) * 12,
                               editForm.taxState,
                             ).combinedRate.toFixed(2)}
                             %
@@ -588,7 +714,9 @@ export default function IncomePage() {
                           <p className="text-sm text-zinc-700">
                             Estimated federal tax rate:{" "}
                             {getAutoTaxBreakdown(
-                              (Number(editForm.amount) || 0) * 12,
+                              editForm.period === "annual"
+                                ? Number(editForm.amount) || 0
+                                : (Number(editForm.amount) || 0) * 12,
                               editForm.taxState,
                             ).federalRate.toFixed(2)}
                             %
@@ -596,7 +724,9 @@ export default function IncomePage() {
                           <p className="text-sm text-zinc-700">
                             Estimated state tax rate:{" "}
                             {getAutoTaxBreakdown(
-                              (Number(editForm.amount) || 0) * 12,
+                              editForm.period === "annual"
+                                ? Number(editForm.amount) || 0
+                                : (Number(editForm.amount) || 0) * 12,
                               editForm.taxState,
                             ).stateRate.toFixed(2)}
                             %

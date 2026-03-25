@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Category, useBudget } from "../budget-context";
+import { getCurrentMonthKey, isMonthInRange } from "@/lib/month-utils";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -18,6 +19,7 @@ export default function CategoriesPage() {
     updateCategoryName,
     deleteCategory,
   } = useBudget();
+  const currentMonthKey = getCurrentMonthKey();
   const [newCategory, setNewCategory] = useState("");
   const [newLimitType, setNewLimitType] = useState<"amount" | "percent">("amount");
   const [newLimit, setNewLimit] = useState("");
@@ -27,7 +29,10 @@ export default function CategoriesPage() {
   const [editingLimit, setEditingLimit] = useState("");
 
   const monthlyIncome = incomes.reduce(
-    (total, income) => total + income.postTaxAmount,
+    (total, income) =>
+      isMonthInRange(currentMonthKey, income.startMonth, income.endMonth)
+        ? total + income.postTaxAmount
+        : total,
     0,
   );
 

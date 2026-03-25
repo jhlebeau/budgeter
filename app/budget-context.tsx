@@ -48,6 +48,10 @@ export type Income = {
   id: string;
   source: string;
   amount: number;
+  inputAmount: number;
+  period: "monthly" | "annual";
+  startMonth: string;
+  endMonth: string | null;
   taxType: "pre" | "post";
   taxMethod: "manual" | "auto";
   taxState: TaxStateCode | null;
@@ -58,6 +62,9 @@ export type Income = {
 export type IncomeInput = {
   source: string;
   amount: number;
+  period: "monthly" | "annual";
+  startMonth: string;
+  endMonth: string | null;
   taxType: "pre" | "post";
   taxMethod: "manual" | "auto";
   taxState: TaxStateCode | null;
@@ -115,6 +122,8 @@ type ApiIncome = {
   name: string;
   amount: number;
   frequency: "MONTHLY" | "ANNUAL";
+  startMonth: string;
+  endMonth: string | null;
   isPreTax: boolean;
   taxRate: number | null;
   taxState: TaxStateCode | null;
@@ -156,6 +165,10 @@ const toIncome = (income: ApiIncome): Income => {
     id: income.id,
     source: income.name,
     amount: monthlyAmount,
+    inputAmount: income.amount,
+    period: income.frequency === "ANNUAL" ? "annual" : "monthly",
+    startMonth: income.startMonth,
+    endMonth: income.endMonth,
     taxType: income.isPreTax ? "pre" : "post",
     taxMethod: income.isPreTax && income.taxState ? "auto" : "manual",
     taxState: income.taxState,
@@ -493,14 +506,18 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     const incomePayload: {
       name: string;
       amount: number;
-      frequency: "MONTHLY";
+      frequency: "MONTHLY" | "ANNUAL";
+      startMonth: string;
+      endMonth: string | null;
       isPreTax: boolean;
       taxRate?: number;
       taxState?: TaxStateCode;
     } = {
       name: income.source,
       amount: income.amount,
-      frequency: "MONTHLY",
+      frequency: income.period === "annual" ? "ANNUAL" : "MONTHLY",
+      startMonth: income.startMonth,
+      endMonth: income.endMonth,
       isPreTax,
     };
     if (isPreTax) {
@@ -525,14 +542,18 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     const incomePayload: {
       name: string;
       amount: number;
-      frequency: "MONTHLY";
+      frequency: "MONTHLY" | "ANNUAL";
+      startMonth: string;
+      endMonth: string | null;
       isPreTax: boolean;
       taxRate?: number;
       taxState?: TaxStateCode;
     } = {
       name: income.source,
       amount: income.amount,
-      frequency: "MONTHLY",
+      frequency: income.period === "annual" ? "ANNUAL" : "MONTHLY",
+      startMonth: income.startMonth,
+      endMonth: income.endMonth,
       isPreTax,
     };
     if (isPreTax) {

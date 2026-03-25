@@ -19,6 +19,8 @@ model IncomeSource {
   isPreTax  Boolean
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startMonth String  @default("1970-01")
+  endMonth   String?
 
   taxRate   Float?
   taxState  String?

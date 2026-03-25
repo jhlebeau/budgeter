@@ -1,8 +1,9 @@
-import { Frequency } from "@prisma/client";
+import { Frequency, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
 import { TAX_STATES, TaxStateCode } from "@/lib/tax-states";
+import { getCurrentMonthKey, isValidMonthKey } from "@/lib/month-utils";
 import {
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
       name,
       amount,
       frequency,
+      startMonth,
+      endMonth,
       isPreTax,
       taxRate,
       taxState,
@@ -49,24 +52,43 @@ export async function POST(request: Request) {
       name?: unknown;
       amount?: unknown;
       frequency?: unknown;
+      startMonth?: unknown;
+      endMonth?: unknown;
       isPreTax?: unknown;
       taxRate?: unknown;
       taxState?: unknown;
     } = body;
 
     const parsedName = parseRequiredText(name, NAME_MAX_LENGTH);
+    const parsedStartMonth = isValidMonthKey(startMonth)
+      ? startMonth
+      : getCurrentMonthKey();
+    const parsedEndMonth =
+      endMonth === null || endMonth === undefined
+        ? null
+        : isValidMonthKey(endMonth)
+          ? endMonth
+          : null;
 
     if (
       !parsedName ||
       !isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE) ||
       !isFrequency(frequency) ||
-      typeof isPreTax !== "boolean"
+      typeof isPreTax !== "boolean" ||
+      (endMonth !== undefined && endMonth !== null && !isValidMonthKey(endMonth))
     ) {
       return NextResponse.json(
         {
           error:
             "Invalid payload. Required: name, amount (>=0), frequency (MONTHLY|ANNUAL), isPreTax.",
         },
+        { status: 400 },
+      );
+    }
+
+    if (parsedEndMonth && parsedEndMonth < parsedStartMonth) {
+      return NextResponse.json(
+        { error: "endMonth cannot be earlier than startMonth." },
         { status: 400 },
       );
     }
@@ -90,6 +112,8 @@ export async function POST(request: Request) {
         name: parsedName,
         amount,
         frequency,
+        startMonth: parsedStartMonth,
+        endMonth: parsedEndMonth,
         isPreTax,
         userId,
         taxRate: isPreTax ? (taxRate as number | undefined) : null,
@@ -98,7 +122,28 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(incomeSource, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      return NextResponse.json(
+        {
+          error:
+            "Income payload is incompatible with current database schema. Run migrations and restart the dev server.",
+        },
+        { status: 500 },
+      );
+    }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "An income source with conflicting data already exists." },
+        { status: 409 },
+      );
+    }
+
+    console.error("POST /api/income-sources failed:", error);
     return NextResponse.json(
       { error: "Unable to create income source." },
       { status: 500 },

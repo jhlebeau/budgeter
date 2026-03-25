@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import { useBudget } from "../../budget-context";
+import { isMonthInRange } from "@/lib/month-utils";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -27,8 +28,15 @@ export default function SpendingMonthPage() {
   const { categories, savingCategories, transactions, incomes } = useBudget();
 
   const monthlyIncome = useMemo(
-    () => incomes.reduce((total, income) => total + income.postTaxAmount, 0),
-    [incomes],
+    () =>
+      incomes.reduce(
+        (total, income) =>
+          isMonthInRange(month, income.startMonth, income.endMonth)
+            ? total + income.postTaxAmount
+            : total,
+        0,
+      ),
+    [incomes, month],
   );
 
   const isValidMonth =
