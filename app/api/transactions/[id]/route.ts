@@ -222,7 +222,8 @@ export async function PATCH(
           categoryId: nextCategoryId,
           userId,
           frequency: nextFrequency,
-          ...(parsedScope === "ALL" ? { startDate: nextDate, endDate: null } : {}),
+          endDate: null,
+          ...(parsedScope === "ALL" ? { startDate: nextDate } : {}),
         },
       });
 
