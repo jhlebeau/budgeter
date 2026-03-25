@@ -9,7 +9,7 @@ import {
   TAX_STATE_LABELS,
   TaxStateCode,
 } from "@/lib/tax-states";
-import { getCurrentMonthKey } from "@/lib/month-utils";
+import { getCurrentMonthKey, isMonthInRange } from "@/lib/month-utils";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -254,6 +254,7 @@ const toEditForm = (income: Income): IncomeForm => ({
 
 export default function IncomePage() {
   const { incomes, addIncome, updateIncome, deleteIncome } = useBudget();
+  const currentMonthKey = getCurrentMonthKey();
   const [form, setForm] = useState<IncomeForm>(() => ({
     ...emptyForm,
     startMonth: getCurrentMonthKey(),
@@ -350,6 +351,67 @@ export default function IncomePage() {
     setEditingId(null);
     setEditForm(emptyForm);
   };
+
+  const totalMonthlyIncomeSummary = useMemo(() => {
+    const activeIncomes = incomes.filter((income) =>
+      isMonthInRange(currentMonthKey, income.startMonth, income.endMonth),
+    );
+
+    let directMonthlyPostTaxTotal = 0;
+    const autoPreTaxAnnualByState: Partial<Record<TaxState, number>> = {};
+
+    for (const income of activeIncomes) {
+      if (income.taxType !== "pre") {
+        directMonthlyPostTaxTotal += income.postTaxAmount;
+        continue;
+      }
+
+      if (income.taxMethod === "auto" && income.taxState) {
+        autoPreTaxAnnualByState[income.taxState] =
+          (autoPreTaxAnnualByState[income.taxState] ?? 0) + income.amount * 12;
+        continue;
+      }
+
+      directMonthlyPostTaxTotal += income.postTaxAmount;
+    }
+
+    const totalAutoPreTaxAnnual = Object.values(autoPreTaxAnnualByState).reduce(
+      (total, annualAmount) => total + annualAmount,
+      0,
+    );
+    if (totalAutoPreTaxAnnual <= 0) {
+      return {
+        monthlyIncome: directMonthlyPostTaxTotal,
+        combinedRate: 0,
+        federalRate: 0,
+        stateRate: 0,
+      };
+    }
+
+    const cumulativeFederalTax = calculateFederalTax2026Single(totalAutoPreTaxAnnual);
+    const cumulativeStateTax = (
+      Object.entries(autoPreTaxAnnualByState) as Array<[TaxState, number]>
+    ).reduce(
+      (total, [taxState, annualAmount]) =>
+      total + calculateStateTax(annualAmount, taxState),
+      0,
+    );
+    const combinedTaxRate =
+      ((cumulativeFederalTax + cumulativeStateTax) / totalAutoPreTaxAnnual) * 100;
+    const federalTaxRate = (cumulativeFederalTax / totalAutoPreTaxAnnual) * 100;
+    const stateTaxRate = (cumulativeStateTax / totalAutoPreTaxAnnual) * 100;
+    const cumulativeAutoPostTaxMonthly = Math.max(
+      0,
+      totalAutoPreTaxAnnual - cumulativeFederalTax - cumulativeStateTax,
+    ) / 12;
+
+    return {
+      monthlyIncome: directMonthlyPostTaxTotal + cumulativeAutoPostTaxMonthly,
+      combinedRate: combinedTaxRate,
+      federalRate: federalTaxRate,
+      stateRate: stateTaxRate,
+    };
+  }, [currentMonthKey, incomes]);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
@@ -545,7 +607,23 @@ export default function IncomePage() {
       </form>
 
       <section className="mt-6">
-        <h2 className="mb-3 text-lg font-medium">Monthly Incomes</h2>
+        <h2 className="mb-3 text-lg font-medium">Total Monthly Income</h2>
+        <div className="mb-4 rounded border px-3 py-2 text-sm">
+          <p className="font-medium">
+            {currencyFormatter.format(totalMonthlyIncomeSummary.monthlyIncome)}
+          </p>
+          <p className="text-zinc-700">
+            Total combined tax rate: {totalMonthlyIncomeSummary.combinedRate.toFixed(2)}%
+          </p>
+          <p className="text-zinc-700">
+            Total federal tax rate: {totalMonthlyIncomeSummary.federalRate.toFixed(2)}%
+          </p>
+          <p className="text-zinc-700">
+            Total state tax rate: {totalMonthlyIncomeSummary.stateRate.toFixed(2)}%
+          </p>
+        </div>
+
+        <h3 className="mb-3 text-base font-medium">Individual Monthly Incomes</h3>
         <ul className="space-y-2">
           {incomes.map((income) => (
             <li key={income.id} className="rounded border px-3 py-2 text-sm">
@@ -788,7 +866,7 @@ export default function IncomePage() {
                     <p>State: {income.taxState}</p>
                   ) : null}
                   <p>
-                    Post-tax monthly value:{" "}
+                    Individual post-tax monthly value:{" "}
                     {currencyFormatter.format(income.postTaxAmount)}
                   </p>
                   <button
