@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useBudget } from "../budget-context";
+import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 
 type FormData = {
   amount: string;
@@ -36,12 +37,24 @@ export default function TransactionsPage() {
   const [submitError, setSubmitError] = useState("");
   const [deleteScopeForId, setDeleteScopeForId] = useState<string | null>(null);
   const [editScopeForId, setEditScopeForId] = useState<string | null>(null);
+  const categoriesForSelect = (() => {
+    const unassigned = categories.find(
+      (category) => category.name === UNASSIGNED_CATEGORY_NAME,
+    );
+    const others = categories.filter(
+      (category) => category.name !== UNASSIGNED_CATEGORY_NAME,
+    );
+    return unassigned ? [...others, unassigned] : others;
+  })();
 
   useEffect(() => {
     setForm((current) =>
       current.date
         ? current
-        : { ...current, date: new Date().toISOString().slice(0, 10) },
+        : {
+            ...current,
+            date: new Date().toISOString().slice(0, 10),
+          },
     );
   }, []);
 
@@ -62,7 +75,10 @@ export default function TransactionsPage() {
       return;
     }
 
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+      date: new Date().toISOString().slice(0, 10),
+    });
   };
 
   const startEditing = (id: string) => {
@@ -112,14 +128,9 @@ export default function TransactionsPage() {
           }
           className="w-full rounded border px-3 py-2"
           required
-          disabled={categories.length === 0}
         >
-          <option value="">
-            {categories.length === 0
-              ? "Create a category in set spending first"
-              : "Select a category"}
-          </option>
-          {categories.map((category) => (
+          <option value="">Select a category</option>
+          {categoriesForSelect.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
@@ -193,7 +204,7 @@ export default function TransactionsPage() {
         <button
           type="submit"
           className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-          disabled={categories.length === 0}
+          disabled={!form.categoryId}
         >
           Add Transaction
         </button>
@@ -224,7 +235,7 @@ export default function TransactionsPage() {
                     required
                   >
                     <option value="">Select a category</option>
-                    {categories.map((category) => (
+                    {categoriesForSelect.map((category) => (
                       <option key={category.id} value={category.id}>
                         {category.name}
                       </option>

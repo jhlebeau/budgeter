@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useMemo } from "react";
 import { useBudget } from "../../budget-context";
 import { isMonthInRange } from "@/lib/month-utils";
+import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -42,10 +43,12 @@ export default function SpendingMonthPage() {
   const isValidMonth =
     /^\d{4}-\d{2}$/.test(month) && Number(month.slice(5, 7)) >= 1 && Number(month.slice(5, 7)) <= 12;
 
-  const spendingByCategory = useMemo(() => {
+  const regularSpendingByCategory = useMemo(() => {
     if (!isValidMonth) return [];
 
-    return categories.map((category) => {
+    return categories
+      .filter((category) => category.name !== UNASSIGNED_CATEGORY_NAME)
+      .map((category) => {
       const currentSpend = transactions
         .filter(
           (transaction) =>
@@ -66,21 +69,44 @@ export default function SpendingMonthPage() {
             ? category.limitValue
             : (monthlyIncome * category.limitValue) / 100) - currentSpend,
       };
-    });
+      });
   }, [categories, isValidMonth, month, monthlyIncome, transactions]);
+
+  const unassignedCurrentSpend = useMemo(() => {
+    if (!isValidMonth) return 0;
+    const unassignedCategoryId = categories.find(
+      (category) => category.name === UNASSIGNED_CATEGORY_NAME,
+    )?.id;
+    if (!unassignedCategoryId) return 0;
+    return transactions
+      .filter(
+        (transaction) =>
+          transaction.categoryId === unassignedCategoryId &&
+          transaction.date.startsWith(month),
+      )
+      .reduce((total, transaction) => total + transaction.amount, 0);
+  }, [categories, isValidMonth, month, transactions]);
 
   const totalSpending = useMemo(
     () =>
-      spendingByCategory.reduce(
+      regularSpendingByCategory.reduce(
+        (total, category) => total + category.currentSpend,
+        0,
+      ) + unassignedCurrentSpend,
+    [regularSpendingByCategory, unassignedCurrentSpend],
+  );
+  const regularCategorySpendingTotal = useMemo(
+    () =>
+      regularSpendingByCategory.reduce(
         (total, category) => total + category.currentSpend,
         0,
       ),
-    [spendingByCategory],
+    [regularSpendingByCategory],
   );
   const totalBudgetedSpending = useMemo(
     () =>
-      spendingByCategory.reduce((total, category) => total + category.maxSpend, 0),
-    [spendingByCategory],
+      regularSpendingByCategory.reduce((total, category) => total + category.maxSpend, 0),
+    [regularSpendingByCategory],
   );
 
   const totalBudgetedSavings = useMemo(
@@ -109,8 +135,28 @@ export default function SpendingMonthPage() {
     [monthlyIncome, savingCategories],
   );
 
-  const totalSpendLeft = totalBudgetedSpending - totalSpending;
-  const additionalIncome = monthlyIncome - totalBudgetedSavings - totalSpending;
+  const additionalBudgetedSpendingThisMonth =
+    totalBudgetedSpending - regularCategorySpendingTotal;
+  const unassignedMaxSpend =
+    monthlyIncome - totalBudgetedSpending - totalBudgetedSavings;
+  const unassignedIncome = unassignedMaxSpend - unassignedCurrentSpend;
+  const spendingByCategory = useMemo(
+    () => [
+      ...regularSpendingByCategory,
+      {
+        category: UNASSIGNED_CATEGORY_NAME,
+        currentSpend: unassignedCurrentSpend,
+        maxSpend: unassignedMaxSpend,
+        spendLeft: unassignedIncome,
+      },
+    ],
+    [
+      regularSpendingByCategory,
+      unassignedCurrentSpend,
+      unassignedIncome,
+      unassignedMaxSpend,
+    ],
+  );
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
@@ -130,12 +176,13 @@ export default function SpendingMonthPage() {
           <div className="mb-3 rounded border px-3 py-2 text-sm">
             <p>Income This Month: {currencyFormatter.format(monthlyIncome)}</p>
             <p>Total Spent: {currencyFormatter.format(totalSpending)}</p>
-            <p className={totalSpendLeft < 0 ? "text-red-600" : ""}>
-              Spend Left This Month: {currencyFormatter.format(totalSpendLeft)}
+            <p className={additionalBudgetedSpendingThisMonth < 0 ? "text-red-600" : ""}>
+              Additional Budgeted Spending This Month:{" "}
+              {currencyFormatter.format(additionalBudgetedSpendingThisMonth)}
             </p>
             <p>Budgeted Savings: {currencyFormatter.format(totalBudgetedSavings)}</p>
-            <p className={additionalIncome < 0 ? "text-red-600" : ""}>
-              Leftover Income: {currencyFormatter.format(additionalIncome)}
+            <p className={unassignedIncome < 0 ? "text-red-600" : ""}>
+              Unspent, Unassigned Income: {currencyFormatter.format(unassignedIncome)}
             </p>
           </div>
           <h2 className="mb-3 text-lg font-medium">Spending by Category</h2>

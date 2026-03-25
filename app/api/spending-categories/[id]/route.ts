@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
 import {
+  ensureUnassignedSpendingCategory,
+  isUnassignedCategoryName,
+} from "@/lib/spending-category";
+import {
   CATEGORY_NAME_MAX_LENGTH,
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
@@ -104,6 +108,22 @@ export async function PATCH(
         { status: 400 },
       );
     }
+    if (
+      name !== undefined &&
+      isUnassignedCategoryName(String(name)) &&
+      !isUnassignedCategoryName(existing.name)
+    ) {
+      return NextResponse.json(
+        { error: "Unassigned is a reserved category name." },
+        { status: 400 },
+      );
+    }
+    if (isUnassignedCategoryName(existing.name) && name !== undefined) {
+      return NextResponse.json(
+        { error: "The Unassigned category name cannot be changed." },
+        { status: 400 },
+      );
+    }
 
     const parsedName =
       name !== undefined ? parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH) : undefined;
@@ -150,7 +170,26 @@ export async function DELETE(
       { status: 404 },
     );
   }
+  if (isUnassignedCategoryName(existing.name)) {
+    return NextResponse.json(
+      { error: "The Unassigned category cannot be deleted." },
+      { status: 400 },
+    );
+  }
 
-  await prisma.spendingCategory.delete({ where: { id } });
+  const unassignedCategory = await ensureUnassignedSpendingCategory(userId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.transaction.updateMany({
+      where: { userId, categoryId: id },
+      data: { categoryId: unassignedCategory.id },
+    });
+    await tx.recurringTransaction.updateMany({
+      where: { userId, categoryId: id },
+      data: { categoryId: unassignedCategory.id },
+    });
+    await tx.spendingCategory.delete({ where: { id } });
+  });
+
   return new NextResponse(null, { status: 204 });
 }

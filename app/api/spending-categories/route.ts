@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserId, userExists } from "@/lib/api-user";
 import {
+  ensureUnassignedSpendingCategory,
+  isUnassignedCategoryName,
+} from "@/lib/spending-category";
+import {
   CATEGORY_NAME_MAX_LENGTH,
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
@@ -19,6 +23,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "User not found." }, { status: 401 });
   }
 
+  await ensureUnassignedSpendingCategory(userId);
   const categories = await prisma.spendingCategory.findMany({
     where: { userId },
     include: { transactions: true },
@@ -56,12 +61,13 @@ export async function POST(request: Request) {
       !parsedName ||
       !parsedLimitType ||
       parsedLimitValue === null ||
+      isUnassignedCategoryName(parsedName) ||
       (parsedLimitType === "PERCENT" && parsedLimitValue > 10_000)
     ) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. Required: name, limitType (AMOUNT|PERCENT), limitValue (>=0).",
+            "Invalid payload. name cannot be Unassigned. Required: name, limitType (AMOUNT|PERCENT), limitValue (>=0).",
         },
         { status: 400 },
       );

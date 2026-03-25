@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Category, useBudget } from "../budget-context";
 import { getCurrentMonthKey, isMonthInRange } from "@/lib/month-utils";
+import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -27,6 +28,9 @@ export default function CategoriesPage() {
   const [editingName, setEditingName] = useState("");
   const [editingLimitType, setEditingLimitType] = useState<"amount" | "percent">("amount");
   const [editingLimit, setEditingLimit] = useState("");
+  const visibleCategories = categories.filter(
+    (category) => category.name !== UNASSIGNED_CATEGORY_NAME,
+  );
 
   const monthlyIncome = incomes.reduce(
     (total, income) =>
@@ -41,7 +45,7 @@ export default function CategoriesPage() {
     limitValue: number,
   ) => (limitType === "amount" ? limitValue : (monthlyIncome * limitValue) / 100);
 
-  const totalBudgetedAmount = categories.reduce(
+  const totalBudgetedAmount = visibleCategories.reduce(
     (total, category) =>
       total + getCategoryBudgetAmount(category.limitType, category.limitValue),
     0,
@@ -154,7 +158,7 @@ export default function CategoriesPage() {
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-medium">Current Categories</h2>
         <ul className="space-y-2">
-          {categories.map((category) => (
+          {visibleCategories.map((category) => (
             <li key={category.name} className="rounded border px-3 py-2 text-sm">
               <p className="mb-2 font-medium">{category.name}</p>
               <p className="mb-2 text-zinc-600">
@@ -237,7 +241,7 @@ export default function CategoriesPage() {
                   type="button"
                   onClick={async () => {
                     const shouldDelete = window.confirm(
-                      `Delete category "${category.name}"? This will also delete its transactions.`,
+                      `Delete category "${category.name}"? Existing transactions will be recategorized to Unassigned.`,
                     );
                     if (!shouldDelete) return;
 
@@ -256,7 +260,7 @@ export default function CategoriesPage() {
               </div>
             </li>
           ))}
-          {categories.length === 0 ? (
+          {visibleCategories.length === 0 ? (
             <li className="text-sm text-zinc-500">No categories yet.</li>
           ) : null}
         </ul>

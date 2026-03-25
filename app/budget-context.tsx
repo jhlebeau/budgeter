@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { TaxStateCode } from "@/lib/tax-states";
+import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 
 export type Category = {
   id: string;
@@ -290,6 +291,13 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     setTransactions(transactionsData.map(toTransaction));
   };
 
+  const refreshCategories = async () => {
+    const response = await authFetch("/api/spending-categories", { cache: "no-store" });
+    if (!response || !response.ok) return;
+    const categoriesData = (await response.json()) as ApiCategory[];
+    setCategories(categoriesData.map(toCategory));
+  };
+
   const addCategory = async (
     name: string,
     limitType: "amount" | "percent",
@@ -297,6 +305,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   ) => {
     const nextName = name.trim();
     if (!nextName || limitValue < 0) return false;
+    if (nextName.toLowerCase() === UNASSIGNED_CATEGORY_NAME.toLowerCase()) {
+      return false;
+    }
 
     const exists = categories.some(
       (category) => category.name.toLowerCase() === nextName.toLowerCase(),
@@ -370,10 +381,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     });
     if (!response || !response.ok) return;
 
-    setCategories((current) => current.filter((category) => category.id !== id));
-    setTransactions((current) =>
-      current.filter((transaction) => transaction.categoryId !== id),
-    );
+    await Promise.all([refreshCategories(), refreshTransactions()]);
   };
 
   const addSavingCategory = async (
