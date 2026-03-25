@@ -60,6 +60,13 @@ export async function POST(request: Request) {
     } = body;
 
     const parsedName = parseRequiredText(name, NAME_MAX_LENGTH);
+    const parsedAmount = isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE)
+      ? (amount as number)
+      : null;
+    const parsedFrequency = isFrequency(frequency)
+      ? (frequency as Frequency)
+      : null;
+    const parsedIsPreTax = typeof isPreTax === "boolean" ? isPreTax : null;
     const parsedStartMonth = isValidMonthKey(startMonth)
       ? startMonth
       : getCurrentMonthKey();
@@ -72,9 +79,9 @@ export async function POST(request: Request) {
 
     if (
       !parsedName ||
-      !isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE) ||
-      !isFrequency(frequency) ||
-      typeof isPreTax !== "boolean" ||
+      parsedAmount === null ||
+      parsedFrequency === null ||
+      parsedIsPreTax === null ||
       (endMonth !== undefined && endMonth !== null && !isValidMonthKey(endMonth))
     ) {
       return NextResponse.json(
@@ -110,14 +117,14 @@ export async function POST(request: Request) {
     const incomeSource = await prisma.incomeSource.create({
       data: {
         name: parsedName,
-        amount,
-        frequency,
+        amount: parsedAmount,
+        frequency: parsedFrequency,
         startMonth: parsedStartMonth,
         endMonth: parsedEndMonth,
-        isPreTax,
+        isPreTax: parsedIsPreTax,
         userId,
-        taxRate: isPreTax ? (taxRate as number | undefined) : null,
-        taxState: isPreTax ? (taxState as TaxStateCode | undefined) : null,
+        taxRate: parsedIsPreTax ? (taxRate as number | undefined) : null,
+        taxState: parsedIsPreTax ? (taxState as TaxStateCode | undefined) : null,
       },
     });
 

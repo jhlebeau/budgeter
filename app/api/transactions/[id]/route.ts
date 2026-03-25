@@ -12,6 +12,7 @@ import {
 } from "@/lib/input-validation";
 
 type Scope = "THIS" | "FUTURE" | "ALL";
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const parseDate = (value: unknown) => {
   if (typeof value !== "string" && !(value instanceof Date)) return null;
@@ -65,7 +66,9 @@ const validateUpdatePayload = (body: UpdatePayload) => {
 
   const parsedDescription =
     body.description !== undefined
-      ? parseOptionalText(body.description, DESCRIPTION_MAX_LENGTH)
+      ? body.description === null
+        ? ""
+        : parseOptionalText(body.description, DESCRIPTION_MAX_LENGTH)
       : undefined;
   if (parsedDescription === null) {
     return {
@@ -201,10 +204,7 @@ export async function PATCH(
 
     const nextFrequency = parsedFrequency ?? series.frequency;
     const now = toUtcDateOnly(new Date());
-    const regenerationStart =
-      parsedScope === "THIS"
-        ? toUtcDateOnly(existing.date)
-        : nextDate;
+    const regenerationStart = nextDate;
 
     if (regenerationStart.getTime() > now.getTime()) {
       return NextResponse.json(
@@ -222,9 +222,22 @@ export async function PATCH(
           categoryId: nextCategoryId,
           userId,
           frequency: nextFrequency,
-          ...(parsedScope === "ALL" ? { startDate: nextDate } : {}),
+          ...(parsedScope === "ALL" ? { startDate: nextDate, endDate: null } : {}),
         },
       });
+
+      if (parsedScope === "ALL") {
+        await tx.recurringTransactionSkipDate.deleteMany({
+          where: { recurringSeriesId: seriesId },
+        });
+      } else {
+        await tx.recurringTransactionSkipDate.deleteMany({
+          where: {
+            recurringSeriesId: seriesId,
+            date: { gte: nextDate },
+          },
+        });
+      }
 
       if (parsedScope === "ALL") {
         await tx.transaction.deleteMany({
@@ -346,28 +359,63 @@ export async function DELETE(
       return NextResponse.json({ error: "Transaction not found." }, { status: 404 });
     }
 
-    if (!existing.recurringSeriesId || scope === "THIS") {
+    if (!existing.recurringSeriesId) {
       await prisma.transaction.delete({ where: { id } });
+      return new NextResponse(null, { status: 204 });
+    }
+    const recurringSeriesId = existing.recurringSeriesId;
+
+    if (scope === "THIS") {
+      await prisma.$transaction(async (tx) => {
+        await tx.recurringTransactionSkipDate.upsert({
+          where: {
+            recurringSeriesId_date: {
+              recurringSeriesId,
+              date: toUtcDateOnly(existing.date),
+            },
+          },
+          create: {
+            recurringSeriesId,
+            date: toUtcDateOnly(existing.date),
+          },
+          update: {},
+        });
+        await tx.transaction.delete({ where: { id } });
+      });
       return new NextResponse(null, { status: 204 });
     }
 
     if (scope === "FUTURE") {
-      await prisma.transaction.deleteMany({
-        where: {
-          userId,
-          recurringSeriesId: existing.recurringSeriesId,
-          date: { gte: toUtcDateOnly(existing.date) },
-        },
+      const cutoffDate = toUtcDateOnly(existing.date);
+      const endDate = new Date(cutoffDate.getTime() - DAY_MS);
+      await prisma.$transaction(async (tx) => {
+        await tx.recurringTransaction.update({
+          where: { id: recurringSeriesId },
+          data: { endDate },
+        });
+        await tx.recurringTransactionSkipDate.deleteMany({
+          where: {
+            recurringSeriesId,
+            date: { gte: cutoffDate },
+          },
+        });
+        await tx.transaction.deleteMany({
+          where: {
+            userId,
+            recurringSeriesId,
+            date: { gte: cutoffDate },
+          },
+        });
       });
       return new NextResponse(null, { status: 204 });
     }
 
     await prisma.$transaction(async (tx) => {
       await tx.transaction.deleteMany({
-        where: { userId, recurringSeriesId: existing.recurringSeriesId },
+        where: { userId, recurringSeriesId },
       });
       await tx.recurringTransaction.deleteMany({
-        where: { id: existing.recurringSeriesId, userId },
+        where: { id: recurringSeriesId, userId },
       });
     });
     return new NextResponse(null, { status: 204 });

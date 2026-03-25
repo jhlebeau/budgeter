@@ -35,13 +35,53 @@ export async function GET(request: Request) {
     },
   });
 
+  const seriesIds = recurringSeries.map((series) => series.id);
+  let skippedDateKeysBySeries = new Map<string, Set<string>>();
+  if (seriesIds.length > 0) {
+    try {
+      const skippedDates = await prisma.recurringTransactionSkipDate.findMany({
+        where: { recurringSeriesId: { in: seriesIds } },
+        select: { recurringSeriesId: true, date: true },
+      });
+      skippedDateKeysBySeries = skippedDates.reduce((acc, skippedDate) => {
+        const keys = acc.get(skippedDate.recurringSeriesId) ?? new Set<string>();
+        keys.add(dateKey(skippedDate.date));
+        acc.set(skippedDate.recurringSeriesId, keys);
+        return acc;
+      }, new Map<string, Set<string>>());
+    } catch (error) {
+      if (!(error instanceof Prisma.PrismaClientValidationError)) {
+        throw error;
+      }
+    }
+  }
+
   for (const series of recurringSeries) {
-    const expectedDates = generateRecurringDates(series.startDate, now, series.frequency);
+    const seriesWithOptionalEndDate = series as typeof series & {
+      endDate?: Date | null;
+    };
+    const generationEnd =
+      seriesWithOptionalEndDate.endDate &&
+      seriesWithOptionalEndDate.endDate.getTime() < now.getTime()
+        ? seriesWithOptionalEndDate.endDate
+        : now;
+    if (series.startDate.getTime() > generationEnd.getTime()) {
+      continue;
+    }
+
+    const skippedDateKeys = skippedDateKeysBySeries.get(series.id) ?? new Set<string>();
+    const expectedDates = generateRecurringDates(
+      series.startDate,
+      generationEnd,
+      series.frequency,
+    );
     const existingDateKeys = new Set(
       series.transactions.map((transaction) => dateKey(transaction.date)),
     );
     const missingDates = expectedDates.filter(
-      (expectedDate) => !existingDateKeys.has(dateKey(expectedDate)),
+      (expectedDate) =>
+        !existingDateKeys.has(dateKey(expectedDate)) &&
+        !skippedDateKeys.has(dateKey(expectedDate)),
     );
 
     if (missingDates.length > 0) {
@@ -92,25 +132,47 @@ export async function POST(request: Request) {
     } = body;
 
     const parsedDate = parseDate(date);
-    const parsedDescription = parseOptionalText(description, DESCRIPTION_MAX_LENGTH);
-    if (
-      !isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE) ||
-      !parsedDate ||
-      parsedDescription === null ||
-      !isUuidLikeOrLegacyId(categoryId)
-    ) {
+    const parsedDescription =
+      description === undefined || description === null
+        ? ""
+        : parseOptionalText(description, DESCRIPTION_MAX_LENGTH);
+    const parsedAmount = isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE)
+      ? (amount as number)
+      : null;
+    const parsedCategoryId = isUuidLikeOrLegacyId(categoryId)
+      ? (categoryId as string)
+      : null;
+    if (parsedAmount === null) {
+      return NextResponse.json(
+        { error: "Invalid amount. amount must be a number >= 0." },
+        { status: 400 },
+      );
+    }
+    if (!parsedDate) {
+      return NextResponse.json(
+        { error: "Invalid date. Please provide a valid date." },
+        { status: 400 },
+      );
+    }
+    if (parsedDescription === null) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. Required: amount (>=0), date, categoryId. Optional: description.",
+            "Invalid description. description must be text up to 300 characters.",
         },
+        { status: 400 },
+      );
+    }
+    if (parsedCategoryId === null) {
+      return NextResponse.json(
+        { error: "Invalid categoryId. categoryId is required." },
         { status: 400 },
       );
     }
 
     const normalizedDate = toUtcDateOnly(parsedDate);
     const category = await prisma.spendingCategory.findFirst({
-      where: { id: categoryId, userId },
+      where: { id: parsedCategoryId, userId },
       select: { id: true },
     });
     if (!category) {
@@ -144,22 +206,22 @@ export async function POST(request: Request) {
     let transactionId: string;
     if (shouldRecur && parsedFrequency) {
       const now = toUtcDateOnly(new Date());
-      const dates = generateRecurringDates(normalizedDate, now, parsedFrequency);
-      if (dates.length === 0) {
-        return NextResponse.json(
-          { error: "Recurring start date cannot be in the future." },
-          { status: 400 },
-        );
-      }
+      const generationEnd =
+        normalizedDate.getTime() > now.getTime() ? normalizedDate : now;
+      const dates = generateRecurringDates(
+        normalizedDate,
+        generationEnd,
+        parsedFrequency,
+      );
 
       const createdId = await prisma.$transaction(async (tx) => {
         const series = await tx.recurringTransaction.create({
           data: {
             frequency: parsedFrequency,
             startDate: normalizedDate,
-            amount,
+            amount: parsedAmount,
             description: parsedDescription || null,
-            categoryId,
+            categoryId: parsedCategoryId,
             userId,
           },
         });
@@ -168,10 +230,10 @@ export async function POST(request: Request) {
           dates.map((occurrenceDate) =>
             tx.transaction.create({
               data: {
-                amount,
+                amount: parsedAmount,
                 date: occurrenceDate,
                 description: parsedDescription || null,
-                categoryId,
+                categoryId: parsedCategoryId,
                 userId,
                 recurringSeriesId: series.id,
               },
@@ -189,10 +251,10 @@ export async function POST(request: Request) {
     } else {
       const transaction = await prisma.transaction.create({
         data: {
-          amount,
+          amount: parsedAmount,
           date: normalizedDate,
           description: parsedDescription || null,
-          categoryId,
+          categoryId: parsedCategoryId,
           userId,
         },
         select: { id: true },

@@ -76,7 +76,7 @@ export async function PATCH(
     if (
       limitValue !== undefined &&
       (!isValidFiniteNumber(limitValue, 0, MAX_MONEY_VALUE) ||
-        (limitType === "PERCENT" && limitValue > 10_000))
+        (limitType === "PERCENT" && (limitValue as number) > 10_000))
     ) {
       return NextResponse.json(
         { error: "limitValue must be a non-negative number when provided." },
@@ -94,7 +94,11 @@ export async function PATCH(
       );
     }
     const nextLimitType = (limitType ?? existing.limitType) as LimitType;
-    if (limitValue !== undefined && nextLimitType === "PERCENT" && limitValue > 10_000) {
+    if (
+      limitValue !== undefined &&
+      nextLimitType === "PERCENT" &&
+      (limitValue as number) > 10_000
+    ) {
       return NextResponse.json(
         { error: "Percent limit must be <= 10,000." },
         { status: 400 },
@@ -103,13 +107,17 @@ export async function PATCH(
 
     const parsedName =
       name !== undefined ? parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH) : undefined;
+    const parsedLimitType =
+      limitType !== undefined ? (limitType as LimitType) : undefined;
+    const parsedLimitValue =
+      limitValue !== undefined ? (limitValue as number) : undefined;
 
     const category = await prisma.spendingCategory.update({
       where: { id },
       data: {
         ...(parsedName ? { name: parsedName } : {}),
-        ...(limitType !== undefined ? { limitType } : {}),
-        ...(limitValue !== undefined ? { limitValue } : {}),
+        ...(parsedLimitType !== undefined ? { limitType: parsedLimitType } : {}),
+        ...(parsedLimitValue !== undefined ? { limitValue: parsedLimitValue } : {}),
       },
       include: { transactions: true },
     });

@@ -22,10 +22,16 @@ export default function SavingsCategoriesPage() {
   const currentMonthKey = getCurrentMonthKey();
   const [newCategory, setNewCategory] = useState("");
   const [newLimitType, setNewLimitType] = useState<"amount" | "percent">("amount");
+  const [newAmountPeriod, setNewAmountPeriod] = useState<"monthly" | "annual">(
+    "monthly",
+  );
   const [newLimit, setNewLimit] = useState("");
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingLimitType, setEditingLimitType] = useState<"amount" | "percent">("amount");
+  const [editingAmountPeriod, setEditingAmountPeriod] = useState<
+    "monthly" | "annual"
+  >("monthly");
   const [editingLimit, setEditingLimit] = useState("");
   const [saveError, setSaveError] = useState("");
 
@@ -53,9 +59,16 @@ export default function SavingsCategoriesPage() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaveError("");
-    if (await addSavingCategory(newCategory, newLimitType, Number(newLimit))) {
+    const enteredLimit = Number(newLimit);
+    const normalizedLimit =
+      newLimitType === "amount" && newAmountPeriod === "annual"
+        ? enteredLimit / 12
+        : enteredLimit;
+
+    if (await addSavingCategory(newCategory, newLimitType, normalizedLimit)) {
       setNewCategory("");
       setNewLimitType("amount");
+      setNewAmountPeriod("monthly");
       setNewLimit("");
       return;
     }
@@ -66,22 +79,29 @@ export default function SavingsCategoriesPage() {
     setEditingCategory(category.id);
     setEditingName(category.name);
     setEditingLimitType(category.limitType);
+    setEditingAmountPeriod("monthly");
     setEditingLimit(String(category.limitValue));
   };
 
   const saveLimitEdit = async () => {
     if (!editingCategory) return;
+    const enteredLimit = Number(editingLimit);
+    const normalizedLimit =
+      editingLimitType === "amount" && editingAmountPeriod === "annual"
+        ? enteredLimit / 12
+        : enteredLimit;
 
     const didRename = await updateSavingCategoryName(editingCategory, editingName);
     if (!didRename) return;
     await updateSavingCategoryLimit(
       editingCategory,
       editingLimitType,
-      Number(editingLimit),
+      normalizedLimit,
     );
     setEditingCategory(null);
     setEditingName("");
     setEditingLimitType("amount");
+    setEditingAmountPeriod("monthly");
     setEditingLimit("");
   };
 
@@ -117,6 +137,18 @@ export default function SavingsCategoriesPage() {
           <option value="amount">Dollar amount</option>
           <option value="percent">Percent of monthly income</option>
         </select>
+        {newLimitType === "amount" ? (
+          <select
+            value={newAmountPeriod}
+            onChange={(event) =>
+              setNewAmountPeriod(event.target.value as "monthly" | "annual")
+            }
+            className="w-full rounded border px-3 py-2"
+          >
+            <option value="monthly">Monthly amount</option>
+            <option value="annual">Annual amount</option>
+          </select>
+        ) : null}
         <div className="relative">
           {newLimitType === "amount" ? (
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
@@ -129,7 +161,9 @@ export default function SavingsCategoriesPage() {
             min="0"
             placeholder={
               newLimitType === "amount"
-                ? "Monthly savings target"
+                ? newAmountPeriod === "annual"
+                  ? "Annual savings target"
+                  : "Monthly savings target"
                 : "Percent of monthly income"
             }
             value={newLimit}
@@ -140,6 +174,11 @@ export default function SavingsCategoriesPage() {
             required
           />
         </div>
+        {newLimitType === "amount" && newAmountPeriod === "annual" ? (
+          <p className="text-sm text-zinc-600">
+            Annual amounts are converted to monthly after saving.
+          </p>
+        ) : null}
         <button
           type="submit"
           className="rounded bg-black px-4 py-2 text-white hover:bg-zinc-800"
@@ -171,7 +210,7 @@ export default function SavingsCategoriesPage() {
               <p className="mb-2 text-zinc-600">
                 Current limit:{" "}
                 {category.limitType === "amount"
-                  ? currencyFormatter.format(category.limitValue)
+                  ? `${currencyFormatter.format(category.limitValue)} / month`
                   : `${category.limitValue.toFixed(2)}% (${currencyFormatter.format(
                       getCategoryBudgetAmount(category.limitType, category.limitValue),
                     )})`}
@@ -198,6 +237,20 @@ export default function SavingsCategoriesPage() {
                       <option value="amount">Dollar amount</option>
                       <option value="percent">Percent of monthly income</option>
                     </select>
+                    {editingLimitType === "amount" ? (
+                      <select
+                        value={editingAmountPeriod}
+                        onChange={(event) =>
+                          setEditingAmountPeriod(
+                            event.target.value as "monthly" | "annual",
+                          )
+                        }
+                        className="rounded border px-3 py-1.5"
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="annual">Annual</option>
+                      </select>
+                    ) : null}
                     <div className="relative">
                       {editingLimitType === "amount" ? (
                         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
@@ -215,6 +268,12 @@ export default function SavingsCategoriesPage() {
                         }`}
                       />
                     </div>
+                    {editingLimitType === "amount" &&
+                    editingAmountPeriod === "annual" ? (
+                      <p className="text-sm text-zinc-600">
+                        Annual amounts are converted to monthly after saving.
+                      </p>
+                    ) : null}
                     <button
                       type="button"
                       onClick={saveLimitEdit}
@@ -228,6 +287,7 @@ export default function SavingsCategoriesPage() {
                         setEditingCategory(null);
                         setEditingName("");
                         setEditingLimitType("amount");
+                        setEditingAmountPeriod("monthly");
                         setEditingLimit("");
                       }}
                       className="rounded border px-3 py-1.5 hover:bg-zinc-50"

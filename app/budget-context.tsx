@@ -102,7 +102,7 @@ type BudgetContextValue = {
   ) => Promise<void>;
   updateSavingCategoryName: (id: string, nextName: string) => Promise<boolean>;
   deleteSavingCategory: (id: string) => Promise<void>;
-  addTransaction: (transaction: TransactionInput) => Promise<void>;
+  addTransaction: (transaction: TransactionInput) => Promise<string | null>;
   updateTransaction: (
     id: string,
     transaction: TransactionInput,
@@ -466,8 +466,15 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
       }),
     });
-    if (!response || !response.ok) return;
+    if (!response) return "Unable to create transaction.";
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      return payload?.error ?? "Unable to create transaction.";
+    }
     await refreshTransactions();
+    return null;
   };
 
   const updateTransaction = async (

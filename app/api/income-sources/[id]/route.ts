@@ -130,6 +130,19 @@ export async function PATCH(
     }
 
     const parsedName = name !== undefined ? parseRequiredText(name, NAME_MAX_LENGTH) : undefined;
+    const parsedAmount = amount !== undefined ? (amount as number) : undefined;
+    const parsedFrequency =
+      frequency !== undefined ? (frequency as Frequency) : undefined;
+    const parsedStartMonth =
+      startMonth !== undefined ? (startMonth as string) : undefined;
+    const parsedEndMonth =
+      endMonth !== undefined ? (endMonth as string | null) : undefined;
+    const parsedIsPreTax =
+      isPreTax !== undefined ? (isPreTax as boolean) : undefined;
+    const parsedTaxRate =
+      taxRate !== undefined ? (taxRate as number) : undefined;
+    const parsedTaxState =
+      taxState !== undefined ? (taxState as TaxStateCode) : undefined;
     const nextStartMonth =
       startMonth !== undefined ? (startMonth as string) : current.startMonth;
     const nextEndMonth =
@@ -148,15 +161,21 @@ export async function PATCH(
       where: { id },
       data: {
         ...(parsedName ? { name: parsedName } : {}),
-        ...(amount !== undefined ? { amount } : {}),
-        ...(frequency !== undefined ? { frequency } : {}),
-        ...(startMonth !== undefined ? { startMonth } : {}),
-        ...(endMonth !== undefined ? { endMonth } : {}),
-        ...(isPreTax !== undefined ? { isPreTax } : {}),
+        ...(parsedAmount !== undefined ? { amount: parsedAmount } : {}),
+        ...(parsedFrequency !== undefined
+          ? { frequency: parsedFrequency }
+          : {}),
+        ...(parsedStartMonth !== undefined
+          ? { startMonth: parsedStartMonth }
+          : {}),
+        ...(parsedEndMonth !== undefined ? { endMonth: parsedEndMonth } : {}),
+        ...(parsedIsPreTax !== undefined ? { isPreTax: parsedIsPreTax } : {}),
         ...(nextIsPreTax
           ? {
-              ...(taxRate !== undefined ? { taxRate } : {}),
-              ...(taxState !== undefined ? { taxState } : {}),
+              ...(parsedTaxRate !== undefined ? { taxRate: parsedTaxRate } : {}),
+              ...(parsedTaxState !== undefined
+                ? { taxState: parsedTaxState }
+                : {}),
             }
           : { taxRate: null, taxState: null }),
       },

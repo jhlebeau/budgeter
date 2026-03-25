@@ -80,6 +80,7 @@ model RecurringTransaction {
   id          String   @id @default(uuid())
   frequency   RecurrenceFrequency
   startDate   DateTime
+  endDate     DateTime?
   amount      Float
   description String?
   userId      String
@@ -89,9 +90,21 @@ model RecurringTransaction {
   category    SpendingCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   transactions Transaction[]
+  skippedDates RecurringTransactionSkipDate[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model RecurringTransactionSkipDate {
+  id                String   @id @default(uuid())
+  recurringSeriesId String
+  recurringSeries   RecurringTransaction @relation(fields: [recurringSeriesId], references: [id], onDelete: Cascade)
+  date              DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([recurringSeriesId, date])
 }
 
 model User {

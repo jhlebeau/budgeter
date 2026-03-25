@@ -46,4 +46,4 @@ export const isUuidLikeOrLegacyId = (value: unknown) =>
   typeof value === "string" &&
   value.length > 0 &&
   value.length <= 64 &&
-  /^[A-Za-z0-9-]+$/.test(value);
+  /^[A-Za-z0-9_-]+$/.test(value);

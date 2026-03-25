@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useBudget } from "../budget-context";
 
 type FormData = {
@@ -33,25 +33,23 @@ export default function TransactionsPage() {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormData>(emptyForm);
+  const [submitError, setSubmitError] = useState("");
+  const [deleteScopeForId, setDeleteScopeForId] = useState<string | null>(null);
+  const [editScopeForId, setEditScopeForId] = useState<string | null>(null);
 
-  const chooseRecurringScope = (actionLabel: "edit" | "delete") => {
-    const rawValue = window.prompt(
-      `This is a recurring transaction. Type "this", "future", or "all" to ${actionLabel}.`,
-      "this",
+  useEffect(() => {
+    setForm((current) =>
+      current.date
+        ? current
+        : { ...current, date: new Date().toISOString().slice(0, 10) },
     );
-    if (!rawValue) return null;
-    const scope = rawValue.trim().toLowerCase();
-    if (scope === "this" || scope === "future" || scope === "all") {
-      return scope;
-    }
-    window.alert('Please enter "this", "future", or "all".');
-    return null;
-  };
+  }, []);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSubmitError("");
 
-    await addTransaction({
+    const error = await addTransaction({
       amount: Number(form.amount),
       categoryId: form.categoryId,
       date: form.date,
@@ -59,6 +57,10 @@ export default function TransactionsPage() {
       isRecurring: form.isRecurring,
       recurrenceFrequency: form.recurrenceFrequency,
     });
+    if (error) {
+      setSubmitError(error);
+      return;
+    }
 
     setForm(emptyForm);
   };
@@ -68,6 +70,7 @@ export default function TransactionsPage() {
     if (!transaction) return;
 
     setEditingId(id);
+    setEditScopeForId(null);
     setEditForm({
       amount: String(transaction.amount),
       categoryId: transaction.categoryId,
@@ -78,17 +81,8 @@ export default function TransactionsPage() {
     });
   };
 
-  const saveEdit = async () => {
+  const saveEdit = async (scope: "this" | "future" | "all" = "this") => {
     if (editingId === null) return;
-    const transaction = transactions.find((item) => item.id === editingId);
-    if (!transaction) return;
-
-    let scope: "this" | "future" | "all" = "this";
-    if (transaction.recurringSeriesId) {
-      const selectedScope = chooseRecurringScope("edit");
-      if (!selectedScope) return;
-      scope = selectedScope;
-    }
 
     await updateTransaction(editingId, {
       amount: Number(editForm.amount),
@@ -99,6 +93,7 @@ export default function TransactionsPage() {
     }, scope);
 
     setEditingId(null);
+    setEditScopeForId(null);
     setEditForm(emptyForm);
   };
 
@@ -202,6 +197,9 @@ export default function TransactionsPage() {
         >
           Add Transaction
         </button>
+        {submitError ? (
+          <p className="text-sm font-medium text-red-600">{submitError}</p>
+        ) : null}
       </form>
 
       <section className="mt-6">
@@ -295,20 +293,69 @@ export default function TransactionsPage() {
                       <option value="monthly">Monthly</option>
                     </select>
                   ) : null}
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={saveEdit}
-                      className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
-                      disabled={!editForm.categoryId}
-                    >
-                      Save
-                    </button>
+                  <div className="flex flex-wrap gap-2">
+                    {transaction.recurringSeriesId ? (
+                      editScopeForId === transaction.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit("this")}
+                            className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
+                            disabled={!editForm.categoryId}
+                          >
+                            Save This Transaction
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit("future")}
+                            className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
+                            disabled={!editForm.categoryId}
+                          >
+                            Save This and All Following Transactions
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => saveEdit("all")}
+                            className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
+                            disabled={!editForm.categoryId}
+                          >
+                            Save All Transactions
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditScopeForId(null)}
+                            className="rounded border px-3 py-1.5 hover:bg-zinc-50"
+                          >
+                            Cancel Scope
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setEditScopeForId(transaction.id)}
+                          className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
+                          disabled={!editForm.categoryId}
+                        >
+                          Save
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => saveEdit("this")}
+                        className="rounded bg-black px-3 py-1.5 text-white hover:bg-zinc-800"
+                        disabled={!editForm.categoryId}
+                      >
+                        Save
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
                         setEditingId(null);
+                        setEditScopeForId(null);
                         setEditForm(emptyForm);
+                        setDeleteScopeForId(null);
                       }}
                       className="rounded border px-3 py-1.5 hover:bg-zinc-50"
                     >
@@ -337,28 +384,83 @@ export default function TransactionsPage() {
                   >
                     Edit
                   </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (transaction.recurringSeriesId) {
-                        const selectedScope = chooseRecurringScope("delete");
-                        if (!selectedScope) return;
-                        const shouldDelete = window.confirm(
-                          `Delete ${selectedScope} transaction(s) in this recurring series?`,
-                        );
+                  {transaction.recurringSeriesId ? (
+                    <div className="mt-2 ml-2 inline-flex flex-wrap gap-2">
+                      {deleteScopeForId === transaction.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const shouldDelete = window.confirm(
+                                "Delete this transaction?",
+                              );
+                              if (!shouldDelete) return;
+                              await deleteTransaction(transaction.id, "this");
+                              setDeleteScopeForId(null);
+                            }}
+                            className="rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                          >
+                            Delete This Transaction
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const shouldDelete = window.confirm(
+                                "Delete this and all following transactions?",
+                              );
+                              if (!shouldDelete) return;
+                              await deleteTransaction(transaction.id, "future");
+                              setDeleteScopeForId(null);
+                            }}
+                            className="rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                          >
+                            Delete This and All Following Transactions
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const shouldDelete = window.confirm(
+                                "Delete all transactions in this recurring series?",
+                              );
+                              if (!shouldDelete) return;
+                              await deleteTransaction(transaction.id, "all");
+                              setDeleteScopeForId(null);
+                            }}
+                            className="rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                          >
+                            Delete All Transactions
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteScopeForId(null)}
+                            className="rounded border px-3 py-1.5 hover:bg-zinc-50"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteScopeForId(transaction.id)}
+                          className="rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const shouldDelete = window.confirm("Delete this transaction?");
                         if (!shouldDelete) return;
-                        await deleteTransaction(transaction.id, selectedScope);
-                        return;
-                      }
-
-                      const shouldDelete = window.confirm("Delete this transaction?");
-                      if (!shouldDelete) return;
-                      await deleteTransaction(transaction.id, "this");
-                    }}
-                    className="mt-2 ml-2 rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
-                  >
-                    Delete
-                  </button>
+                        await deleteTransaction(transaction.id, "this");
+                      }}
+                      className="mt-2 ml-2 rounded border px-3 py-1.5 text-red-600 hover:bg-zinc-50"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </>
               )}
             </li>

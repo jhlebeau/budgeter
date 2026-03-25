@@ -46,12 +46,16 @@ export async function POST(request: Request) {
     } = body;
 
     const parsedName = parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH);
+    const parsedLimitType = isLimitType(limitType) ? limitType : null;
+    const parsedLimitValue = isValidFiniteNumber(limitValue, 0, MAX_MONEY_VALUE)
+      ? (limitValue as number)
+      : null;
 
     if (
       !parsedName ||
-      !isLimitType(limitType) ||
-      !isValidFiniteNumber(limitValue, 0, MAX_MONEY_VALUE) ||
-      (limitType === "PERCENT" && limitValue > 10_000)
+      !parsedLimitType ||
+      parsedLimitValue === null ||
+      (parsedLimitType === "PERCENT" && parsedLimitValue > 10_000)
     ) {
       return NextResponse.json(
         {
@@ -66,8 +70,8 @@ export async function POST(request: Request) {
       data: {
         name: parsedName,
         userId,
-        limitType,
-        limitValue,
+        limitType: parsedLimitType,
+        limitValue: parsedLimitValue,
       },
     });
 
