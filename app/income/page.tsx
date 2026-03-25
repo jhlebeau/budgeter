@@ -499,8 +499,6 @@ export default function IncomePage() {
       ),
     [currentMonthKey, incomes],
   );
-  const preTaxCount = incomes.filter((income) => income.taxType === "pre").length;
-
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),_transparent_36%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -542,7 +540,7 @@ export default function IncomePage() {
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <MetricCard
             label="Net monthly income"
             value={currencyFormatter.format(totalMonthlyIncomeSummary.monthlyIncome)}
@@ -552,11 +550,6 @@ export default function IncomePage() {
             label="Combined tax rate"
             value={`${totalMonthlyIncomeSummary.combinedRate.toFixed(2)}%`}
             detail={`${totalMonthlyIncomeSummary.federalRate.toFixed(2)}% federal and ${totalMonthlyIncomeSummary.stateRate.toFixed(2)}% state`}
-          />
-          <MetricCard
-            label="Pre-tax sources"
-            value={String(preTaxCount)}
-            detail={`${incomes.length - preTaxCount} post-tax source${incomes.length - preTaxCount === 1 ? "" : "s"} currently saved`}
           />
         </section>
 

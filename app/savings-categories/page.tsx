@@ -83,6 +83,7 @@ function MetricCard({
 
 export default function SavingsCategoriesPage() {
   const {
+    categories,
     savingCategories,
     incomes,
     addSavingCategory,
@@ -128,12 +129,14 @@ export default function SavingsCategoriesPage() {
       total + getCategoryBudgetAmount(category.limitType, category.limitValue),
     0,
   );
-  const remainingAfterSavings = monthlyIncome - totalBudgetedAmount;
+  const totalSpendingAmount = categories.reduce(
+    (total, category) =>
+      total + getCategoryBudgetAmount(category.limitType, category.limitValue),
+    0,
+  );
+  const remainingAfterSpendingAndSaving =
+    monthlyIncome - totalBudgetedAmount - totalSpendingAmount;
   const isOverBudget = totalBudgetedAmount > monthlyIncome;
-  const percentBasedCount = savingCategories.filter(
-    (category) => category.limitType === "percent",
-  ).length;
-
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaveError("");
@@ -227,25 +230,20 @@ export default function SavingsCategoriesPage() {
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <MetricCard
             label="Total savings planned"
             value={currencyFormatter.format(totalBudgetedAmount)}
             detail={`Across ${savingCategories.length} savings categor${savingCategories.length === 1 ? "y" : "ies"}`}
           />
           <MetricCard
-            label="Income left after goals"
-            value={currencyFormatter.format(Math.max(remainingAfterSavings, 0))}
+            label="Left after spending and saving"
+            value={currencyFormatter.format(Math.max(remainingAfterSpendingAndSaving, 0))}
             detail={
-              isOverBudget
-                ? `Over target by ${currencyFormatter.format(Math.abs(remainingAfterSavings))}`
-                : "Unallocated after savings goals"
+              remainingAfterSpendingAndSaving < 0
+                ? `Over target by ${currencyFormatter.format(Math.abs(remainingAfterSpendingAndSaving))}`
+                : "Unallocated after both plans"
             }
-          />
-          <MetricCard
-            label="Percent-based goals"
-            value={String(percentBasedCount)}
-            detail={`${savingCategories.length - percentBasedCount} use fixed dollar targets`}
           />
           <MetricCard
             label="Savings plan status"
@@ -337,7 +335,7 @@ export default function SavingsCategoriesPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-4">
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Monthly Income
@@ -356,10 +354,18 @@ export default function SavingsCategoriesPage() {
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Budgeted Spending
+                    </p>
+                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                      {currencyFormatter.format(totalSpendingAmount)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Remaining
                     </p>
                     <p className="mt-2 text-xl font-semibold text-slate-950">
-                      {currencyFormatter.format(remainingAfterSavings)}
+                      {currencyFormatter.format(remainingAfterSpendingAndSaving)}
                     </p>
                   </div>
                 </div>
@@ -398,7 +404,7 @@ export default function SavingsCategoriesPage() {
             title="Current savings categories"
             description="Review your active savings mix, adjust monthly and annual targets, and keep every goal visible in one clean planning view."
           >
-            <div className="mb-5 grid gap-3 sm:grid-cols-2">
+            <div className="mb-5">
               <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                 <p className="text-sm text-slate-500">Total monthly target</p>
                 <p className="mt-2 text-2xl font-semibold text-slate-950">
@@ -406,15 +412,6 @@ export default function SavingsCategoriesPage() {
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
                   {savingCategories.length} savings categories tracked
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Remaining after savings</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  {currencyFormatter.format(remainingAfterSavings)}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Based on income for {currentMonthKey}
                 </p>
               </div>
             </div>

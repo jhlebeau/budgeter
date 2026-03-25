@@ -17,6 +17,9 @@ const monthFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
+const surfaceClass =
+  "rounded-3xl border border-slate-200/80 bg-white/90 shadow-[0_18px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur";
+
 const formatMonthLabel = (monthKey: string) => {
   const [yearText, monthText] = monthKey.split("-");
   const year = Number(yearText);
@@ -24,9 +27,59 @@ const formatMonthLabel = (monthKey: string) => {
   return monthFormatter.format(new Date(year, month - 1, 1));
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`${surfaceClass} p-6 sm:p-7`}>
+      <div className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+          {eyebrow}
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-slate-950">{title}</h2>
+        {description ? (
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className={`${surfaceClass} p-5`}>
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
+      <p className="mt-2 text-sm text-slate-500">{detail}</p>
+    </div>
+  );
+}
+
 export default function SpendingMonthPage() {
   const { month } = useParams<{ month: string }>();
   const { categories, savingCategories, transactions, incomes } = useBudget();
+
+  const isValidMonth =
+    /^\d{4}-\d{2}$/.test(month) &&
+    Number(month.slice(5, 7)) >= 1 &&
+    Number(month.slice(5, 7)) <= 12;
 
   const monthlyIncome = useMemo(
     () =>
@@ -40,35 +93,31 @@ export default function SpendingMonthPage() {
     [incomes, month],
   );
 
-  const isValidMonth =
-    /^\d{4}-\d{2}$/.test(month) && Number(month.slice(5, 7)) >= 1 && Number(month.slice(5, 7)) <= 12;
-
   const regularSpendingByCategory = useMemo(() => {
     if (!isValidMonth) return [];
 
     return categories
       .filter((category) => category.name !== UNASSIGNED_CATEGORY_NAME)
       .map((category) => {
-      const currentSpend = transactions
-        .filter(
-          (transaction) =>
-            transaction.categoryId === category.id &&
-            transaction.date.startsWith(month),
-        )
-        .reduce((total, transaction) => total + transaction.amount, 0);
+        const currentSpend = transactions
+          .filter(
+            (transaction) =>
+              transaction.categoryId === category.id &&
+              transaction.date.startsWith(month),
+          )
+          .reduce((total, transaction) => total + transaction.amount, 0);
 
-      return {
-        category: category.name,
-        currentSpend,
-        maxSpend:
+        const maxSpend =
           category.limitType === "amount"
             ? category.limitValue
-            : (monthlyIncome * category.limitValue) / 100,
-        spendLeft:
-          (category.limitType === "amount"
-            ? category.limitValue
-            : (monthlyIncome * category.limitValue) / 100) - currentSpend,
-      };
+            : (monthlyIncome * category.limitValue) / 100;
+
+        return {
+          category: category.name,
+          currentSpend,
+          maxSpend,
+          spendLeft: maxSpend - currentSpend,
+        };
       });
   }, [categories, isValidMonth, month, monthlyIncome, transactions]);
 
@@ -95,6 +144,7 @@ export default function SpendingMonthPage() {
       ) + unassignedCurrentSpend,
     [regularSpendingByCategory, unassignedCurrentSpend],
   );
+
   const regularCategorySpendingTotal = useMemo(
     () =>
       regularSpendingByCategory.reduce(
@@ -103,6 +153,7 @@ export default function SpendingMonthPage() {
       ),
     [regularSpendingByCategory],
   );
+
   const totalBudgetedSpending = useMemo(
     () =>
       regularSpendingByCategory.reduce((total, category) => total + category.maxSpend, 0),
@@ -140,6 +191,7 @@ export default function SpendingMonthPage() {
   const unassignedMaxSpend =
     monthlyIncome - totalBudgetedSpending - totalBudgetedSavings;
   const unassignedIncome = unassignedMaxSpend - unassignedCurrentSpend;
+
   const spendingByCategory = useMemo(
     () => [
       ...regularSpendingByCategory,
@@ -159,85 +211,249 @@ export default function SpendingMonthPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-10">
-      <Link
-        href="/spending"
-        className="mb-5 inline-block text-sm text-zinc-600 hover:underline"
-      >
-        Back to Months
-      </Link>
-      <h1 className="mb-4 text-2xl font-semibold">
-        {isValidMonth ? formatMonthLabel(month) : "Invalid Month"}
-      </h1>
-
-      {isValidMonth ? (
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-3 text-lg font-medium">Summary</h2>
-          <div className="mb-3 rounded border px-3 py-2 text-sm">
-            <p>Income This Month: {currencyFormatter.format(monthlyIncome)}</p>
-            <p>Total Spent: {currencyFormatter.format(totalSpending)}</p>
-            <p className={additionalBudgetedSpendingThisMonth < 0 ? "text-red-600" : ""}>
-              Additional Budgeted Spending This Month:{" "}
-              {currencyFormatter.format(additionalBudgetedSpendingThisMonth)}
-            </p>
-            <p>Budgeted Savings: {currencyFormatter.format(totalBudgetedSavings)}</p>
-            <p className={unassignedIncome < 0 ? "text-red-600" : ""}>
-              Unspent, Unassigned Income: {currencyFormatter.format(unassignedIncome)}
-            </p>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),_transparent_36%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <header className={`${surfaceClass} overflow-hidden p-6 sm:p-8`}>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+                <Link href="/spending" className="text-slate-500 transition hover:text-slate-900">
+                  Spending Reports
+                </Link>
+                <span className="text-slate-300">/</span>
+                <Link href="/home" className="text-slate-500 transition hover:text-slate-900">
+                  Home
+                </Link>
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+                Monthly Spending Report
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                {isValidMonth ? formatMonthLabel(month) : "Invalid Month"}
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+                Review income, category spend, savings targets, and unassigned cash for
+                the selected month in a cleaner dashboard layout.
+              </p>
+            </div>
+            {isValidMonth ? (
+              <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-md">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-sm text-slate-500">Income this month</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">
+                    {currencyFormatter.format(monthlyIncome)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                  <p className="text-sm text-slate-500">Total spent</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-950">
+                    {currencyFormatter.format(totalSpending)}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
-          <h2 className="mb-3 text-lg font-medium">Spending by Category</h2>
-          <ul className="space-y-2">
-            {spendingByCategory.map((category) => (
-              <li key={category.category} className="rounded border px-3 py-2 text-sm">
-                <details>
-                  <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
-                    <span>{category.category}</span>
-                    <span className="flex items-center gap-2">
-                      <span className={category.spendLeft < 0 ? "text-red-600" : ""}>
-                        Spend left this month:{" "}
-                        {currencyFormatter.format(category.spendLeft)}
-                      </span>
-                      <span className="text-zinc-500">▾</span>
-                    </span>
-                  </summary>
-                  <div className="mt-2 space-y-1">
-                    <p>
-                      Current spending:{" "}
-                      {currencyFormatter.format(category.currentSpend)}
-                    </p>
-                    <p>Maximum spend: {currencyFormatter.format(category.maxSpend)}</p>
-                  </div>
-                </details>
-              </li>
-            ))}
-            {spendingByCategory.length === 0 ? (
-              <li className="text-sm text-zinc-500">No categories yet.</li>
-            ) : null}
-          </ul>
+        </header>
 
-          <h2 className="mt-6 mb-3 text-lg font-medium">Savings By Category</h2>
-          <ul className="space-y-2">
-            {savingsByCategory.map((category) => (
-              <li
-                key={category.id}
-                className="flex items-center justify-between rounded border px-3 py-2 text-sm"
+        {isValidMonth ? (
+          <>
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Income this month"
+                value={currencyFormatter.format(monthlyIncome)}
+                detail="Post-tax income active during the selected month"
+              />
+              <MetricCard
+                label="Total spent"
+                value={currencyFormatter.format(totalSpending)}
+                detail="Includes regular category spend and unassigned transactions"
+              />
+              <MetricCard
+                label="Budgeted savings"
+                value={currencyFormatter.format(totalBudgetedSavings)}
+                detail="Savings planned from current category targets"
+              />
+              <MetricCard
+                label="Unspent, unassigned"
+                value={currencyFormatter.format(unassignedIncome)}
+                detail="What remains after planned spending, savings, and actual unassigned spend"
+              />
+            </section>
+
+            <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+              <SectionCard
+                eyebrow="Summary"
+                title="Monthly financial picture"
+                description="Use this summary to compare what came in, what was spent, what was planned, and what remains unassigned."
               >
-                <span>{category.name}</span>
-                <span className="font-medium">
-                  {currencyFormatter.format(category.amount)}
-                </span>
-              </li>
-            ))}
-            {savingsByCategory.length === 0 ? (
-              <li className="text-sm text-zinc-500">No savings categories yet.</li>
-            ) : null}
-          </ul>
-        </section>
-      ) : (
-        <p className="text-sm text-red-600">
-          The month in the URL is not valid. Use YYYY-MM format.
-        </p>
-      )}
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Income
+                    </p>
+                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                      {currencyFormatter.format(monthlyIncome)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Spent
+                    </p>
+                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                      {currencyFormatter.format(totalSpending)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Additional Budgeted Spending
+                    </p>
+                    <p
+                      className={`mt-2 text-xl font-semibold ${
+                        additionalBudgetedSpendingThisMonth < 0
+                          ? "text-red-600"
+                          : "text-slate-950"
+                      }`}
+                    >
+                      {currencyFormatter.format(additionalBudgetedSpendingThisMonth)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Budgeted Savings
+                    </p>
+                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                      {currencyFormatter.format(totalBudgetedSavings)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Unassigned Income
+                    </p>
+                    <p
+                      className={`mt-2 text-xl font-semibold ${
+                        unassignedIncome < 0 ? "text-red-600" : "text-slate-950"
+                      }`}
+                    >
+                      {currencyFormatter.format(unassignedIncome)}
+                    </p>
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                eyebrow="Savings"
+                title="Savings by category"
+                description="Review the savings targets currently applied to this month before comparing them against spending."
+              >
+                <ul className="space-y-3">
+                  {savingsByCategory.map((category) => (
+                    <li
+                      key={category.id}
+                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 text-sm"
+                    >
+                      <span className="font-medium text-slate-900">{category.name}</span>
+                      <span className="font-semibold text-slate-950">
+                        {currencyFormatter.format(category.amount)}
+                      </span>
+                    </li>
+                  ))}
+                  {savingsByCategory.length === 0 ? (
+                    <li className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center text-sm text-slate-500">
+                      No savings categories yet.
+                    </li>
+                  ) : null}
+                </ul>
+              </SectionCard>
+            </div>
+
+            <SectionCard
+              eyebrow="Breakdown"
+              title="Spending by category"
+              description="Open each category to compare current spend against its limit and see how much room is left this month."
+            >
+              <ul className="space-y-4">
+                {spendingByCategory.map((category) => (
+                  <li
+                    key={category.category}
+                    className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
+                  >
+                    <details>
+                      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <p className="text-lg font-semibold text-slate-950">
+                            {category.category}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            Current spending {currencyFormatter.format(category.currentSpend)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p
+                            className={`text-sm font-medium ${
+                              category.spendLeft < 0 ? "text-red-600" : "text-slate-700"
+                            }`}
+                          >
+                            Spend left this month:{" "}
+                            {currencyFormatter.format(category.spendLeft)}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
+                            View details
+                          </p>
+                        </div>
+                      </summary>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            Current Spending
+                          </p>
+                          <p className="mt-2 text-sm font-medium text-slate-900">
+                            {currencyFormatter.format(category.currentSpend)}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            Maximum Spend
+                          </p>
+                          <p className="mt-2 text-sm font-medium text-slate-900">
+                            {currencyFormatter.format(category.maxSpend)}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            Spend Left
+                          </p>
+                          <p
+                            className={`mt-2 text-sm font-medium ${
+                              category.spendLeft < 0 ? "text-red-600" : "text-slate-900"
+                            }`}
+                          >
+                            {currencyFormatter.format(category.spendLeft)}
+                          </p>
+                        </div>
+                      </div>
+                    </details>
+                  </li>
+                ))}
+                {spendingByCategory.length === 0 ? (
+                  <li className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+                    No spending categories yet.
+                  </li>
+                ) : null}
+              </ul>
+            </SectionCard>
+          </>
+        ) : (
+          <SectionCard
+            eyebrow="Invalid Route"
+            title="The selected month is not valid"
+            description="Use a month in `YYYY-MM` format to open a spending report."
+          >
+            <p className="text-sm font-medium text-red-600">
+              The month in the URL is not valid. Use `YYYY-MM` format.
+            </p>
+          </SectionCard>
+        )}
+      </div>
     </main>
   );
 }

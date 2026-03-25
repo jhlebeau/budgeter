@@ -38,6 +38,7 @@ export type Transaction = {
   note: string;
   recurringSeriesId: string | null;
   recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
+  recurringSeriesStatus: "active" | "paused" | null;
 };
 
 export type TransactionInput = {
@@ -157,7 +158,11 @@ type ApiTransaction = {
   description: string | null;
   categoryId: string;
   category: { id: string; name: string };
-  recurringSeries: { id: string; frequency: "DAILY" | "WEEKLY" | "MONTHLY" } | null;
+  recurringSeries: {
+    id: string;
+    frequency: "DAILY" | "WEEKLY" | "MONTHLY";
+    endDate: string | null;
+  } | null;
 };
 
 const toIncome = (income: ApiIncome): Income => {
@@ -191,23 +196,36 @@ const toCategory = (category: ApiCategory): Category => ({
   limitValue: category.limitValue,
 });
 
-const toTransaction = (transaction: ApiTransaction): Transaction => ({
-  id: transaction.id,
-  amount: transaction.amount,
-  categoryId: transaction.categoryId,
-  categoryName: transaction.category.name,
-  date: transaction.date.slice(0, 10),
-  note: transaction.description ?? "",
-  recurringSeriesId: transaction.recurringSeries?.id ?? null,
-  recurrenceFrequency:
-    transaction.recurringSeries?.frequency === "DAILY"
-      ? "daily"
-      : transaction.recurringSeries?.frequency === "WEEKLY"
-        ? "weekly"
-        : transaction.recurringSeries?.frequency === "MONTHLY"
-          ? "monthly"
-          : null,
-});
+const toTransaction = (transaction: ApiTransaction): Transaction => {
+  const recurringEndDate = transaction.recurringSeries?.endDate
+    ? transaction.recurringSeries.endDate.slice(0, 10)
+    : null;
+  const today = new Date().toISOString().slice(0, 10);
+
+  return {
+    id: transaction.id,
+    amount: transaction.amount,
+    categoryId: transaction.categoryId,
+    categoryName: transaction.category.name,
+    date: transaction.date.slice(0, 10),
+    note: transaction.description ?? "",
+    recurringSeriesId: transaction.recurringSeries?.id ?? null,
+    recurrenceFrequency:
+      transaction.recurringSeries?.frequency === "DAILY"
+        ? "daily"
+        : transaction.recurringSeries?.frequency === "WEEKLY"
+          ? "weekly"
+          : transaction.recurringSeries?.frequency === "MONTHLY"
+            ? "monthly"
+            : null,
+    recurringSeriesStatus:
+      transaction.recurringSeries === null
+        ? null
+        : recurringEndDate !== null && recurringEndDate < today
+          ? "paused"
+          : "active",
+  };
+};
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUserState] = useState<AppUser | null>(null);
