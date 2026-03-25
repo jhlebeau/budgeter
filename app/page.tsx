@@ -2,9 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppUser, useBudget } from "./budget-context";
-
-type ActionType = "login" | "create";
+import { useBudget } from "./budget-context";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +17,7 @@ export default function LoginPage() {
     }
   }, [currentUser, router]);
 
-  const submit = async (action: ActionType) => {
+  const submit = async () => {
     setError("");
     const trimmed = username.trim();
     if (!trimmed) {
@@ -37,29 +35,18 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      const response =
-        action === "login"
-          ? await fetch(`/api/users?username=${encodeURIComponent(trimmed)}`)
-          : await fetch("/api/users", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username: trimmed }),
-            });
+      const response = await fetch(`/api/users?username=${encodeURIComponent(trimmed)}`);
 
       if (!response.ok) {
         if (response.status === 404) {
           setError("User not found. Create a new account first.");
           return;
         }
-        if (response.status === 409) {
-          setError("That username already exists. Try logging in.");
-          return;
-        }
         setError("Unable to continue right now.");
         return;
       }
 
-      const user = (await response.json()) as AppUser;
+      const user = await response.json();
       setCurrentUser(user);
       router.push("/home");
     } finally {
@@ -69,7 +56,7 @@ export default function LoginPage() {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void submit("login");
+    void submit();
   };
 
   return (
@@ -100,7 +87,7 @@ export default function LoginPage() {
           <button
             type="button"
             disabled={isSubmitting}
-            onClick={() => void submit("create")}
+            onClick={() => router.push("/create-account")}
             className="rounded border px-4 py-2 hover:bg-zinc-50 disabled:cursor-not-allowed"
           >
             Create Account

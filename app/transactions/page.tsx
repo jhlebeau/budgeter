@@ -325,7 +325,9 @@ export default function TransactionsPage() {
                       Recurs: {transaction.recurrenceFrequency}
                     </p>
                   ) : null}
-                  {transaction.note ? <p>{transaction.note}</p> : null}
+                  {transaction.note ? (
+                    <p className="whitespace-pre-wrap break-words">{transaction.note}</p>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => startEditing(transaction.id)}
