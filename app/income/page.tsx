@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Income, useBudget } from "../budget-context";
-import { NO_STATE_INCOME_TAX_STATES, TaxStateCode } from "@/lib/tax-states";
+import {
+  NO_STATE_INCOME_TAX_STATES,
+  TAX_STATES,
+  TAX_STATE_LABELS,
+  TaxStateCode,
+} from "@/lib/tax-states";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -35,21 +40,102 @@ const CALIFORNIA_BRACKETS_ESTIMATE = [
   { max: Number.POSITIVE_INFINITY, rate: 0.133 },
 ];
 
+const CONNECTICUT_BRACKETS_2026_SINGLE = [
+  { max: 10_000, rate: 0.02 },
+  { max: 50_000, rate: 0.045 },
+  { max: 100_000, rate: 0.055 },
+  { max: 200_000, rate: 0.06 },
+  { max: 250_000, rate: 0.065 },
+  { max: 500_000, rate: 0.069 },
+  { max: Number.POSITIVE_INFINITY, rate: 0.0699 },
+];
+
+const NEW_JERSEY_BRACKETS_2026_SINGLE = [
+  { max: 20_000, rate: 0.014 },
+  { max: 35_000, rate: 0.0175 },
+  { max: 40_000, rate: 0.035 },
+  { max: 75_000, rate: 0.05525 },
+  { max: 500_000, rate: 0.0637 },
+  { max: 1_000_000, rate: 0.0897 },
+  { max: Number.POSITIVE_INFINITY, rate: 0.1075 },
+];
+
+const NEW_YORK_BRACKETS_2026_SINGLE = [
+  { max: 8_500, rate: 0.039 },
+  { max: 11_700, rate: 0.044 },
+  { max: 13_900, rate: 0.0515 },
+  { max: 80_650, rate: 0.054 },
+  { max: 215_400, rate: 0.059 },
+  { max: 1_077_550, rate: 0.0685 },
+  { max: 5_000_000, rate: 0.0965 },
+  { max: 25_000_000, rate: 0.103 },
+  { max: Number.POSITIVE_INFINITY, rate: 0.109 },
+];
+
+const VIRGINIA_BRACKETS_SINGLE = [
+  { max: 3_000, rate: 0.02 },
+  { max: 5_000, rate: 0.03 },
+  { max: 17_000, rate: 0.05 },
+  { max: Number.POSITIVE_INFINITY, rate: 0.0575 },
+];
+
 type TaxState = TaxStateCode;
 
-const TAX_STATE_OPTIONS: Array<{ code: TaxState; label: string }> = [
-  { code: "AK", label: "Alaska" },
-  { code: "CA", label: "California" },
-  { code: "FL", label: "Florida" },
-  { code: "MA", label: "Massachusetts" },
-  { code: "NV", label: "Nevada" },
-  { code: "NH", label: "New Hampshire" },
-  { code: "SD", label: "South Dakota" },
-  { code: "TN", label: "Tennessee" },
-  { code: "TX", label: "Texas" },
-  { code: "WA", label: "Washington" },
-  { code: "WY", label: "Wyoming" },
-];
+const TAX_STATE_OPTIONS: Array<{ code: TaxState; label: string }> = TAX_STATES.map(
+  (code) => ({
+    code,
+    label: TAX_STATE_LABELS[code],
+  }),
+);
+
+// Estimated flat rates for states with single-rate individual income taxes in 2026.
+const FLAT_STATE_TAX_RATES: Partial<Record<TaxState, number>> = {
+  AZ: 0.025,
+  CO: 0.044,
+  GA: 0.0519,
+  ID: 0.053,
+  IL: 0.0495,
+  IN: 0.0295,
+  IA: 0.039,
+  KY: 0.035,
+  LA: 0.03,
+  MA: 0.05,
+  MI: 0.0425,
+  NC: 0.0399,
+  OH: 0.0275,
+  PA: 0.0307,
+  UT: 0.045,
+};
+
+// For graduated-rate states, we use a top-rate estimate as a simple approximation.
+const GRADUATED_STATE_RATE_ESTIMATES: Partial<Record<TaxState, number>> = {
+  AL: 0.05,
+  AR: 0.039,
+  CT: 0.0699,
+  DE: 0.066,
+  HI: 0.11,
+  KS: 0.0558,
+  ME: 0.0715,
+  MD: 0.0575,
+  MN: 0.0985,
+  MO: 0.047,
+  MT: 0.0565,
+  NE: 0.0455,
+  NJ: 0.1075,
+  NM: 0.059,
+  ND: 0.025,
+  OK: 0.045,
+  OR: 0.099,
+  RI: 0.0599,
+  SC: 0.06,
+  VT: 0.0875,
+  WI: 0.0765,
+  WV: 0.0482,
+};
+
+const APPROXIMATED_GRADUATED_STATES = new Set<TaxState>(
+  Object.keys(GRADUATED_STATE_RATE_ESTIMATES) as TaxState[],
+);
 
 type IncomeForm = {
   source: string;
@@ -98,8 +184,38 @@ const calculateFederalTax2026Single = (annualIncome: number) => {
 
 const calculateStateTax = (annualIncome: number, taxState: TaxState) => {
   if (NO_STATE_INCOME_TAX_STATES.has(taxState)) return 0;
-  if (taxState === "MA") return annualIncome * 0.05;
-  return calculateProgressiveTax(annualIncome, CALIFORNIA_BRACKETS_ESTIMATE);
+
+  if (taxState === "CA") {
+    return calculateProgressiveTax(annualIncome, CALIFORNIA_BRACKETS_ESTIMATE);
+  }
+  if (taxState === "CT") {
+    return calculateProgressiveTax(annualIncome, CONNECTICUT_BRACKETS_2026_SINGLE);
+  }
+  if (taxState === "NJ") {
+    return calculateProgressiveTax(annualIncome, NEW_JERSEY_BRACKETS_2026_SINGLE);
+  }
+  if (taxState === "NY") {
+    return calculateProgressiveTax(annualIncome, NEW_YORK_BRACKETS_2026_SINGLE);
+  }
+  if (taxState === "VA") {
+    return calculateProgressiveTax(annualIncome, VIRGINIA_BRACKETS_SINGLE);
+  }
+
+  if (taxState === "MS") {
+    return Math.max(0, annualIncome - 10_000) * 0.04;
+  }
+
+  const flatRate = FLAT_STATE_TAX_RATES[taxState];
+  if (flatRate !== undefined) {
+    return annualIncome * flatRate;
+  }
+
+  const estimatedRate = GRADUATED_STATE_RATE_ESTIMATES[taxState];
+  if (estimatedRate !== undefined) {
+    return annualIncome * estimatedRate;
+  }
+
+  return 0;
 };
 
 const getAutoTaxBreakdown = (annualAmount: number, taxState: TaxState) => {
@@ -343,6 +459,11 @@ export default function IncomePage() {
                 <p className="text-sm text-zinc-700">
                   Estimated state tax rate: {autoTaxBreakdown.stateRate.toFixed(2)}%
                 </p>
+                {APPROXIMATED_GRADUATED_STATES.has(form.taxState) ? (
+                  <p className="text-sm text-amber-700">
+                    Warning: This state currently uses a simplified tax approximation.
+                  </p>
+                ) : null}
               </>
             )}
           </>
@@ -480,6 +601,11 @@ export default function IncomePage() {
                             ).stateRate.toFixed(2)}
                             %
                           </p>
+                          {APPROXIMATED_GRADUATED_STATES.has(editForm.taxState) ? (
+                            <p className="text-sm text-amber-700">
+                              Warning: This state currently uses a simplified tax approximation.
+                            </p>
+                          ) : null}
                         </>
                       )}
                     </>
