@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BudgetProvider } from "./budget-context";
 import { AuthGate } from "./auth-gate";
+import { NumberInputWheelGuard } from "./number-input-wheel-guard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <BudgetProvider>
+          <NumberInputWheelGuard />
           <AuthGate>{children}</AuthGate>
         </BudgetProvider>
       </body>

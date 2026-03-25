@@ -5,10 +5,11 @@ import { requireUserId, userExists } from "@/lib/api-user";
 import { TAX_STATES, TaxStateCode } from "@/lib/tax-states";
 import { getCurrentMonthKey, isValidMonthKey } from "@/lib/month-utils";
 import {
+  ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE,
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
   NAME_MAX_LENGTH,
-  parseRequiredText,
+  parseEntryName,
 } from "@/lib/input-validation";
 
 const isFrequency = (value: unknown): value is Frequency =>
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       taxState?: unknown;
     } = body;
 
-    const parsedName = parseRequiredText(name, NAME_MAX_LENGTH);
+    const parsedName = parseEntryName(name, NAME_MAX_LENGTH);
     const parsedAmount = isValidFiniteNumber(amount, 0, MAX_MONEY_VALUE)
       ? (amount as number)
       : null;
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. Required: name, amount (>=0), frequency (MONTHLY|ANNUAL), isPreTax.",
+            `Invalid payload. Required: name, amount (>=0), frequency (MONTHLY|ANNUAL), isPreTax. ${ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE}`,
         },
         { status: 400 },
       );

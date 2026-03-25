@@ -8,9 +8,10 @@ import {
 } from "@/lib/spending-category";
 import {
   CATEGORY_NAME_MAX_LENGTH,
+  ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE,
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
-  parseRequiredText,
+  parseEntryName,
 } from "@/lib/input-validation";
 
 const isLimitType = (value: unknown): value is LimitType =>
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
       limitValue?: unknown;
     } = body;
 
-    const parsedName = parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH);
+    const parsedName = parseEntryName(name, CATEGORY_NAME_MAX_LENGTH);
     const parsedLimitType = isLimitType(limitType) ? limitType : null;
     const parsedLimitValue = isValidFiniteNumber(limitValue, 0, MAX_MONEY_VALUE)
       ? (limitValue as number)
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Invalid payload. name cannot be Unassigned. Required: name, limitType (AMOUNT|PERCENT), limitValue (>=0).",
+            `Invalid payload. name cannot be Unassigned. Required: name, limitType (AMOUNT|PERCENT), limitValue (>=0). ${ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE}`,
         },
         { status: 400 },
       );

@@ -8,9 +8,10 @@ import {
 } from "@/lib/spending-category";
 import {
   CATEGORY_NAME_MAX_LENGTH,
+  ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE,
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
-  parseRequiredText,
+  parseEntryName,
 } from "@/lib/input-validation";
 
 const isLimitType = (value: unknown): value is LimitType =>
@@ -65,9 +66,11 @@ export async function PATCH(
       limitValue?: unknown;
     } = body;
 
-    if (name !== undefined && !parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH)) {
+    if (name !== undefined && !parseEntryName(name, CATEGORY_NAME_MAX_LENGTH)) {
       return NextResponse.json(
-        { error: "name must be a non-empty string up to 60 chars." },
+        {
+          error: `name must be a non-empty string up to 60 chars. ${ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE}`,
+        },
         { status: 400 },
       );
     }
@@ -126,7 +129,7 @@ export async function PATCH(
     }
 
     const parsedName =
-      name !== undefined ? parseRequiredText(name, CATEGORY_NAME_MAX_LENGTH) : undefined;
+      name !== undefined ? parseEntryName(name, CATEGORY_NAME_MAX_LENGTH) : undefined;
     const parsedLimitType =
       limitType !== undefined ? (limitType as LimitType) : undefined;
     const parsedLimitValue =

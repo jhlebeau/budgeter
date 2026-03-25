@@ -5,10 +5,11 @@ import { requireUserId, userExists } from "@/lib/api-user";
 import { TAX_STATES, TaxStateCode } from "@/lib/tax-states";
 import { isValidMonthKey } from "@/lib/month-utils";
 import {
+  ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE,
   isValidFiniteNumber,
   MAX_MONEY_VALUE,
   NAME_MAX_LENGTH,
-  parseRequiredText,
+  parseEntryName,
 } from "@/lib/input-validation";
 
 const isFrequency = (value: unknown): value is Frequency =>
@@ -71,9 +72,11 @@ export async function PATCH(
       taxState?: unknown;
     } = body;
 
-    if (name !== undefined && !parseRequiredText(name, NAME_MAX_LENGTH)) {
+    if (name !== undefined && !parseEntryName(name, NAME_MAX_LENGTH)) {
       return NextResponse.json(
-        { error: "name must be a non-empty string up to 80 chars." },
+        {
+          error: `name must be a non-empty string up to 80 chars. ${ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE}`,
+        },
         { status: 400 },
       );
     }
@@ -129,7 +132,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Income source not found." }, { status: 404 });
     }
 
-    const parsedName = name !== undefined ? parseRequiredText(name, NAME_MAX_LENGTH) : undefined;
+    const parsedName = name !== undefined ? parseEntryName(name, NAME_MAX_LENGTH) : undefined;
     const parsedAmount = amount !== undefined ? (amount as number) : undefined;
     const parsedFrequency =
       frequency !== undefined ? (frequency as Frequency) : undefined;

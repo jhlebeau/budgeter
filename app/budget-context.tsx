@@ -10,6 +10,12 @@ import {
 } from "react";
 import { TaxStateCode } from "@/lib/tax-states";
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE,
+  NAME_MAX_LENGTH,
+  parseEntryName,
+} from "@/lib/input-validation";
 
 export type Category = {
   id: string;
@@ -83,7 +89,7 @@ type BudgetContextValue = {
     name: string,
     limitType: "amount" | "percent",
     limitValue: number,
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
   updateCategoryLimit: (
     id: string,
     limitType: "amount" | "percent",
@@ -95,7 +101,7 @@ type BudgetContextValue = {
     name: string,
     limitType: "amount" | "percent",
     limitValue: number,
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
   updateSavingCategoryLimit: (
     id: string,
     limitType: "amount" | "percent",
@@ -110,7 +116,7 @@ type BudgetContextValue = {
     scope?: RecurrenceScope,
   ) => Promise<void>;
   deleteTransaction: (id: string, scope?: RecurrenceScope) => Promise<void>;
-  addIncome: (income: IncomeInput) => Promise<void>;
+  addIncome: (income: IncomeInput) => Promise<string | null>;
   updateIncome: (id: string, income: IncomeInput) => Promise<void>;
   deleteIncome: (id: string) => Promise<void>;
   resetData: () => Promise<void>;
@@ -303,16 +309,20 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     limitType: "amount" | "percent",
     limitValue: number,
   ) => {
-    const nextName = name.trim();
-    if (!nextName || limitValue < 0) return false;
+    const nextName = parseEntryName(name, CATEGORY_NAME_MAX_LENGTH);
+    if (!nextName || limitValue < 0) {
+      return `Category names can only use letters, numbers, spaces, underscores, and dashes, and the limit must be non-negative.`;
+    }
     if (nextName.toLowerCase() === UNASSIGNED_CATEGORY_NAME.toLowerCase()) {
-      return false;
+      return `"${UNASSIGNED_CATEGORY_NAME}" is reserved and cannot be used.`;
     }
 
     const exists = categories.some(
       (category) => category.name.toLowerCase() === nextName.toLowerCase(),
     );
-    if (exists) return false;
+    if (exists) {
+      return `A spending category named "${nextName}" already exists.`;
+    }
 
     const response = await authFetch("/api/spending-categories", {
       method: "POST",
@@ -322,11 +332,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         limitValue,
       }),
     });
-    if (!response || !response.ok) return false;
+    if (!response) return "Unable to create spending category.";
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      return payload?.error ?? "Unable to create spending category.";
+    }
 
     const created = (await response.json()) as ApiCategory;
     setCategories((current) => [toCategory(created), ...current]);
-    return true;
+    return null;
   };
 
   const updateCategoryLimit = async (
@@ -352,7 +368,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const updateCategoryName = async (id: string, nextName: string) => {
-    const trimmedName = nextName.trim();
+    const trimmedName = parseEntryName(nextName, CATEGORY_NAME_MAX_LENGTH);
     if (!trimmedName) return false;
 
     const response = await authFetch(`/api/spending-categories/${id}`, {
@@ -389,13 +405,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     limitType: "amount" | "percent",
     limitValue: number,
   ) => {
-    const nextName = name.trim();
-    if (!nextName || limitValue < 0) return false;
+    const nextName = parseEntryName(name, CATEGORY_NAME_MAX_LENGTH);
+    if (!nextName || limitValue < 0) {
+      return `Savings category names can only use letters, numbers, spaces, underscores, and dashes, and the limit must be non-negative.`;
+    }
 
     const exists = savingCategories.some(
       (category) => category.name.toLowerCase() === nextName.toLowerCase(),
     );
-    if (exists) return false;
+    if (exists) {
+      return `A savings category named "${nextName}" already exists.`;
+    }
 
     const response = await authFetch("/api/saving-categories", {
       method: "POST",
@@ -405,11 +425,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         limitValue,
       }),
     });
-    if (!response || !response.ok) return false;
+    if (!response) return "Unable to create savings category.";
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      return payload?.error ?? "Unable to create savings category.";
+    }
 
     const created = (await response.json()) as ApiSavingCategory;
     setSavingCategories((current) => [toCategory(created), ...current]);
-    return true;
+    return null;
   };
 
   const updateSavingCategoryLimit = async (
@@ -435,7 +461,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSavingCategoryName = async (id: string, nextName: string) => {
-    const trimmedName = nextName.trim();
+    const trimmedName = parseEntryName(nextName, CATEGORY_NAME_MAX_LENGTH);
     if (!trimmedName) return false;
 
     const response = await authFetch(`/api/saving-categories/${id}`, {
@@ -517,6 +543,18 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   };
 
   const addIncome = async (income: IncomeInput) => {
+    const nextName = parseEntryName(income.source, NAME_MAX_LENGTH);
+    if (!nextName) {
+      return `Enter a valid income source name. ${ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE}`;
+    }
+
+    const exists = incomes.some(
+      (existingIncome) => existingIncome.source.toLowerCase() === nextName.toLowerCase(),
+    );
+    if (exists) {
+      return `An income source named "${nextName}" already exists.`;
+    }
+
     const isPreTax = income.taxType === "pre";
     const incomePayload: {
       name: string;
@@ -528,7 +566,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       taxRate?: number;
       taxState?: TaxStateCode;
     } = {
-      name: income.source,
+      name: nextName,
       amount: income.amount,
       frequency: income.period === "annual" ? "ANNUAL" : "MONTHLY",
       startMonth: income.startMonth,
@@ -546,10 +584,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       method: "POST",
       body: JSON.stringify(incomePayload),
     });
-    if (!response || !response.ok) return;
+    if (!response) return "Unable to create income source.";
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      return payload?.error ?? "Unable to create income source.";
+    }
 
     const created = (await response.json()) as ApiIncome;
     setIncomes((current) => [toIncome(created), ...current]);
+    return null;
   };
 
   const updateIncome = async (id: string, income: IncomeInput) => {

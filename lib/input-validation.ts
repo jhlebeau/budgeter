@@ -3,9 +3,12 @@ export const NAME_MAX_LENGTH = 80;
 export const CATEGORY_NAME_MAX_LENGTH = 60;
 export const DESCRIPTION_MAX_LENGTH = 300;
 export const MAX_MONEY_VALUE = 1_000_000_000;
+export const ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE =
+  "Only letters, numbers, spaces, underscores, and dashes are allowed.";
 
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/;
 const ALPHANUMERIC_ONLY = /^[A-Za-z0-9]+$/;
+const ENTRY_NAME_ALLOWED_CHARS = /^[A-Za-z0-9 _-]+$/;
 
 export const normalizeUsername = (value: string) => value.trim().toLowerCase();
 
@@ -30,6 +33,12 @@ export const parseOptionalText = (value: unknown, maxLength: number) => {
   if (!trimmed) return "";
   if (trimmed.length > maxLength || CONTROL_CHARS.test(trimmed)) return null;
   return trimmed;
+};
+
+export const parseEntryName = (value: unknown, maxLength: number) => {
+  const trimmed = parseRequiredText(value, maxLength);
+  if (!trimmed) return null;
+  return ENTRY_NAME_ALLOWED_CHARS.test(trimmed) ? trimmed : null;
 };
 
 export const isValidFiniteNumber = (
