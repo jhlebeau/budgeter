@@ -173,6 +173,20 @@ const subtleButtonClass =
 const primaryButtonClass =
   "inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800";
 
+const parseNonNegativeNumberInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const parseRateInput = (value: string) => {
+  const parsed = parseNonNegativeNumberInput(value);
+  return parsed !== null && parsed <= 100 ? parsed : null;
+};
+
+const isValidMonthInput = (value: string) => /^\d{4}-\d{2}$/.test(value);
+
 const calculateProgressiveTax = (
   taxableIncome: number,
   brackets: Array<{ max: number; rate: number }>,
@@ -331,20 +345,25 @@ export default function IncomePage() {
   const [submitError, setSubmitError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<IncomeForm>(emptyForm);
+  const [editError, setEditError] = useState("");
 
   const getEffectiveTaxRate = (annualAmount: number, values: IncomeForm) => {
     if (values.taxType !== "pre") return 0;
     if (values.taxMethod === "manual") {
-      return Number(values.taxRate) || 0;
+      return parseRateInput(values.taxRate) ?? 0;
     }
 
     return getAutoTaxBreakdown(annualAmount, values.taxState).combinedRate;
   };
 
+  const parsedFormAmount = parseNonNegativeNumberInput(form.amount);
+  const parsedEditAmount = parseNonNegativeNumberInput(editForm.amount);
+  const parsedFormTaxRate = parseRateInput(form.taxRate);
+  const parsedEditTaxRate = parseRateInput(editForm.taxRate);
   const monthlyAmount = useMemo(() => {
-    const amount = Number(form.amount) || 0;
+    const amount = parsedFormAmount ?? 0;
     return form.period === "annual" ? amount / 12 : amount;
-  }, [form.amount, form.period]);
+  }, [form.period, parsedFormAmount]);
   const annualAmount = monthlyAmount * 12;
   const autoTaxBreakdown = useMemo(
     () => getAutoTaxBreakdown(annualAmount, form.taxState),
@@ -354,21 +373,41 @@ export default function IncomePage() {
     form.taxType === "pre"
       ? form.taxMethod === "auto"
         ? autoTaxBreakdown.combinedRate
-        : Number(form.taxRate) || 0
+        : parsedFormTaxRate ?? 0
       : 0;
   const postTaxPreview =
     form.taxType === "pre"
       ? monthlyAmount * (1 - effectiveTaxRate / 100)
       : monthlyAmount;
   const showAutoTaxPreview = form.taxType === "pre" && form.taxMethod === "auto";
+  const canSubmitIncome =
+    parsedFormAmount !== null &&
+    isValidMonthInput(form.startMonth) &&
+    (!form.hasEndMonth ||
+      (isValidMonthInput(form.endMonth) && form.endMonth >= form.startMonth)) &&
+    (form.taxType !== "pre" ||
+      form.taxMethod === "auto" ||
+      parsedFormTaxRate !== null);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError("");
+    if (parsedFormAmount === null) {
+      setSubmitError("Enter a valid non-negative amount.");
+      return;
+    }
     const startMonth = form.startMonth || getCurrentMonthKey();
     const endMonth = form.hasEndMonth ? form.endMonth || null : null;
+    if (!isValidMonthInput(startMonth) || (endMonth !== null && !isValidMonthInput(endMonth))) {
+      setSubmitError("Enter valid start and end months.");
+      return;
+    }
     if (endMonth && endMonth < startMonth) {
       setSubmitError("End month cannot be earlier than start month.");
+      return;
+    }
+    if (form.taxType === "pre" && form.taxMethod === "manual" && parsedFormTaxRate === null) {
+      setSubmitError("Enter a valid tax rate between 0 and 100.");
       return;
     }
 
@@ -398,18 +437,35 @@ export default function IncomePage() {
 
   const saveEdit = async () => {
     if (editingId === null) return;
+    setEditError("");
+    if (parsedEditAmount === null) {
+      setEditError("Enter a valid non-negative amount before saving.");
+      return;
+    }
+    if (
+      !isValidMonthInput(editForm.startMonth) ||
+      (editForm.hasEndMonth &&
+        (!isValidMonthInput(editForm.endMonth) || editForm.endMonth < editForm.startMonth))
+    ) {
+      setEditError("Enter valid month values before saving.");
+      return;
+    }
+    if (editForm.taxType === "pre" && editForm.taxMethod === "manual" && parsedEditTaxRate === null) {
+      setEditError("Enter a valid tax rate between 0 and 100 before saving.");
+      return;
+    }
 
     const monthlyEditAmount =
       editForm.period === "annual"
-        ? (Number(editForm.amount) || 0) / 12
-        : Number(editForm.amount) || 0;
+        ? parsedEditAmount / 12
+        : parsedEditAmount;
     const annualEditAmount = monthlyEditAmount * 12;
     const editAutoRate = getEffectiveTaxRate(annualEditAmount, editForm);
     const editEffectiveRate =
       editForm.taxType === "pre"
         ? editForm.taxMethod === "auto"
           ? editAutoRate
-          : Number(editForm.taxRate) || 0
+          : parsedEditTaxRate ?? 0
         : 0;
 
     await updateIncome(editingId, {
@@ -429,6 +485,7 @@ export default function IncomePage() {
 
     setEditingId(null);
     setEditForm(emptyForm);
+    setEditError("");
   };
 
   const totalMonthlyIncomeSummary = useMemo(() => {
@@ -801,7 +858,11 @@ export default function IncomePage() {
                     <p className="mt-2 text-sm font-medium text-red-600">{submitError}</p>
                   ) : null}
                 </div>
-                <button type="submit" className={primaryButtonClass}>
+                <button
+                  type="submit"
+                  className={primaryButtonClass}
+                  disabled={!canSubmitIncome}
+                >
                   Add income source
                 </button>
               </div>
@@ -845,8 +906,8 @@ export default function IncomePage() {
                     : null;
                 const editAutoBreakdown = getAutoTaxBreakdown(
                   editForm.period === "annual"
-                    ? Number(editForm.amount) || 0
-                    : (Number(editForm.amount) || 0) * 12,
+                    ? parsedEditAmount ?? 0
+                    : (parsedEditAmount ?? 0) * 12,
                   editForm.taxState,
                 );
                 const isActive = isMonthInRange(
@@ -1103,7 +1164,24 @@ export default function IncomePage() {
                         ) : null}
 
                         <div className="flex flex-wrap gap-3">
-                          <button type="button" onClick={saveEdit} className={primaryButtonClass}>
+                          {editError ? (
+                            <p className="w-full text-sm font-medium text-red-600">{editError}</p>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={saveEdit}
+                            className={primaryButtonClass}
+                            disabled={
+                              parsedEditAmount === null ||
+                              !isValidMonthInput(editForm.startMonth) ||
+                              (editForm.hasEndMonth &&
+                                (!isValidMonthInput(editForm.endMonth) ||
+                                  editForm.endMonth < editForm.startMonth)) ||
+                              (editForm.taxType === "pre" &&
+                                editForm.taxMethod === "manual" &&
+                                parsedEditTaxRate === null)
+                            }
+                          >
                             Save changes
                           </button>
                           <button
@@ -1111,6 +1189,7 @@ export default function IncomePage() {
                             onClick={() => {
                               setEditingId(null);
                               setEditForm(emptyForm);
+                              setEditError("");
                             }}
                             className={subtleButtonClass}
                           >

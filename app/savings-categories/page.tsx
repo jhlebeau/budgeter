@@ -21,6 +21,13 @@ const subtleButtonClass =
 const primaryButtonClass =
   "inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800";
 
+const parseNonNegativeNumberInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
 function SectionCard({
   eyebrow,
   title,
@@ -137,14 +144,24 @@ export default function SavingsCategoriesPage() {
   const remainingAfterSpendingAndSaving =
     monthlyIncome - totalBudgetedAmount - totalSpendingAmount;
   const isOverBudget = totalBudgetedAmount > monthlyIncome;
+  const parsedNewLimit = parseNonNegativeNumberInput(newLimit);
+  const parsedEditingLimit = parseNonNegativeNumberInput(editingLimit);
+  const canSubmitNewCategory =
+    newCategory.trim().length > 0 && parsedNewLimit !== null;
+  const canSaveEditedCategory =
+    editingName.trim().length > 0 && parsedEditingLimit !== null;
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaveError("");
-    const enteredLimit = Number(newLimit);
+    if (parsedNewLimit === null) {
+      setSaveError("Enter a valid non-negative target.");
+      return;
+    }
     const normalizedLimit =
       newLimitType === "amount" && newAmountPeriod === "annual"
-        ? enteredLimit / 12
-        : enteredLimit;
+        ? parsedNewLimit / 12
+        : parsedNewLimit;
 
     const error = await addSavingCategory(newCategory, newLimitType, normalizedLimit);
     if (!error) {
@@ -167,11 +184,11 @@ export default function SavingsCategoriesPage() {
 
   const saveLimitEdit = async () => {
     if (!editingCategory) return;
-    const enteredLimit = Number(editingLimit);
+    if (parsedEditingLimit === null) return;
     const normalizedLimit =
       editingLimitType === "amount" && editingAmountPeriod === "annual"
-        ? enteredLimit / 12
-        : enteredLimit;
+        ? parsedEditingLimit / 12
+        : parsedEditingLimit;
 
     const didRename = await updateSavingCategoryName(editingCategory, editingName);
     if (!didRename) return;
@@ -392,7 +409,11 @@ export default function SavingsCategoriesPage() {
                     <p className="mt-2 text-sm font-medium text-red-600">{saveError}</p>
                   ) : null}
                 </div>
-                <button type="submit" className={primaryButtonClass}>
+                <button
+                  type="submit"
+                  className={primaryButtonClass}
+                  disabled={!canSubmitNewCategory}
+                >
                   Add savings goal
                 </button>
               </div>
@@ -525,7 +546,12 @@ export default function SavingsCategoriesPage() {
                         ) : null}
 
                         <div className="flex flex-wrap gap-3">
-                          <button type="button" onClick={saveLimitEdit} className={primaryButtonClass}>
+                          <button
+                            type="button"
+                            onClick={saveLimitEdit}
+                            className={primaryButtonClass}
+                            disabled={!canSaveEditedCategory}
+                          >
                             Save changes
                           </button>
                           <button

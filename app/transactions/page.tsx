@@ -47,6 +47,15 @@ const subtleButtonClass =
 const primaryButtonClass =
   "inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400";
 
+const parseNonNegativeNumberInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const isValidDateInput = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
 function SectionCard({
   eyebrow,
   title,
@@ -122,9 +131,16 @@ export default function TransactionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormData>(emptyForm);
   const [submitError, setSubmitError] = useState("");
+  const [editError, setEditError] = useState("");
   const [deleteScopeForId, setDeleteScopeForId] = useState<string | null>(null);
   const [editScopeForId, setEditScopeForId] = useState<string | null>(null);
   const currentMonthKey = getCurrentMonthKey();
+  const parsedFormAmount = parseNonNegativeNumberInput(form.amount);
+  const parsedEditAmount = parseNonNegativeNumberInput(editForm.amount);
+  const canSubmitTransaction =
+    parsedFormAmount !== null && form.categoryId !== "" && isValidDateInput(form.date);
+  const canSaveTransactionEdit =
+    parsedEditAmount !== null && editForm.categoryId !== "" && isValidDateInput(editForm.date);
 
   const categoriesForSelect = useMemo(() => {
     const unassigned = categories.find(
@@ -139,9 +155,13 @@ export default function TransactionsPage() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError("");
+    if (!canSubmitTransaction || parsedFormAmount === null) {
+      setSubmitError("Enter a valid amount, date, and category.");
+      return;
+    }
 
     const error = await addTransaction({
-      amount: Number(form.amount),
+      amount: parsedFormAmount,
       categoryId: form.categoryId,
       date: form.date,
       note: form.note.trim(),
@@ -177,11 +197,16 @@ export default function TransactionsPage() {
 
   const saveEdit = async (scope: "this" | "future" | "all" = "this") => {
     if (editingId === null) return;
+    setEditError("");
+    if (!canSaveTransactionEdit || parsedEditAmount === null) {
+      setEditError("Enter a valid amount, date, and category before saving.");
+      return;
+    }
 
     await updateTransaction(
       editingId,
       {
-        amount: Number(editForm.amount),
+        amount: parsedEditAmount,
         categoryId: editForm.categoryId,
         date: editForm.date,
         note: editForm.note.trim(),
@@ -193,6 +218,7 @@ export default function TransactionsPage() {
     setEditingId(null);
     setEditScopeForId(null);
     setEditForm(emptyForm);
+    setEditError("");
   };
 
   const monthTransactions = useMemo(
@@ -410,7 +436,7 @@ export default function TransactionsPage() {
                 <button
                   type="submit"
                   className={primaryButtonClass}
-                  disabled={!form.categoryId}
+                  disabled={!canSubmitTransaction}
                 >
                   Add transaction
                 </button>
@@ -570,6 +596,9 @@ export default function TransactionsPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
+                        {editError ? (
+                          <p className="w-full text-sm font-medium text-red-600">{editError}</p>
+                        ) : null}
                         {transaction.recurringSeriesId ? (
                           editScopeForId === transaction.id ? (
                             <>
@@ -577,7 +606,7 @@ export default function TransactionsPage() {
                                 type="button"
                                 onClick={() => saveEdit("this")}
                                 className={primaryButtonClass}
-                                disabled={!editForm.categoryId}
+                                disabled={!canSaveTransactionEdit}
                               >
                                 Save this transaction
                               </button>
@@ -585,7 +614,7 @@ export default function TransactionsPage() {
                                 type="button"
                                 onClick={() => saveEdit("future")}
                                 className={primaryButtonClass}
-                                disabled={!editForm.categoryId}
+                                disabled={!canSaveTransactionEdit}
                               >
                                 Save this and following
                               </button>
@@ -593,7 +622,7 @@ export default function TransactionsPage() {
                                 type="button"
                                 onClick={() => saveEdit("all")}
                                 className={primaryButtonClass}
-                                disabled={!editForm.categoryId}
+                                disabled={!canSaveTransactionEdit}
                               >
                                 Save all transactions
                               </button>
@@ -610,7 +639,7 @@ export default function TransactionsPage() {
                               type="button"
                               onClick={() => setEditScopeForId(transaction.id)}
                               className={primaryButtonClass}
-                              disabled={!editForm.categoryId}
+                              disabled={!canSaveTransactionEdit}
                             >
                               Save
                             </button>
@@ -620,7 +649,7 @@ export default function TransactionsPage() {
                             type="button"
                             onClick={() => saveEdit("this")}
                             className={primaryButtonClass}
-                            disabled={!editForm.categoryId}
+                            disabled={!canSaveTransactionEdit}
                           >
                             Save
                           </button>
@@ -632,6 +661,7 @@ export default function TransactionsPage() {
                             setEditScopeForId(null);
                             setEditForm(emptyForm);
                             setDeleteScopeForId(null);
+                            setEditError("");
                           }}
                           className={subtleButtonClass}
                         >

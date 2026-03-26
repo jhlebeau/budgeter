@@ -22,6 +22,13 @@ const subtleButtonClass =
 const primaryButtonClass =
   "inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800";
 
+const parseNonNegativeNumberInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
 function SectionCard({
   eyebrow,
   title,
@@ -137,10 +144,22 @@ export default function CategoriesPage() {
   const remainingAfterSpendingAndSaving =
     monthlyIncome - totalBudgetedAmount - totalSavingsAmount;
   const isOverBudget = totalBudgetedAmount > monthlyIncome;
+  const parsedNewLimit = parseNonNegativeNumberInput(newLimit);
+  const parsedEditingLimit = parseNonNegativeNumberInput(editingLimit);
+  const canSubmitNewCategory =
+    newCategory.trim().length > 0 && parsedNewLimit !== null;
+  const canSaveEditedCategory =
+    editingName.trim().length > 0 && parsedEditingLimit !== null;
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitError("");
-    const error = await addCategory(newCategory, newLimitType, Number(newLimit));
+    if (parsedNewLimit === null) {
+      setSubmitError("Enter a valid non-negative limit.");
+      return;
+    }
+
+    const error = await addCategory(newCategory, newLimitType, parsedNewLimit);
     if (!error) {
       setNewCategory("");
       setNewLimitType("amount");
@@ -159,10 +178,11 @@ export default function CategoriesPage() {
 
   const saveLimitEdit = async () => {
     if (!editingCategory) return;
+    if (parsedEditingLimit === null) return;
 
     const didRename = await updateCategoryName(editingCategory, editingName);
     if (!didRename) return;
-    await updateCategoryLimit(editingCategory, editingLimitType, Number(editingLimit));
+    await updateCategoryLimit(editingCategory, editingLimitType, parsedEditingLimit);
     setEditingCategory(null);
     setEditingName("");
     setEditingLimitType("amount");
@@ -357,7 +377,11 @@ export default function CategoriesPage() {
                     <p className="mt-2 text-sm font-medium text-red-600">{submitError}</p>
                   ) : null}
                 </div>
-                <button type="submit" className={primaryButtonClass}>
+                <button
+                  type="submit"
+                  className={primaryButtonClass}
+                  disabled={!canSubmitNewCategory}
+                >
                   Add category
                 </button>
               </div>
@@ -465,7 +489,12 @@ export default function CategoriesPage() {
                         </div>
 
                         <div className="flex flex-wrap gap-3">
-                          <button type="button" onClick={saveLimitEdit} className={primaryButtonClass}>
+                          <button
+                            type="button"
+                            onClick={saveLimitEdit}
+                            className={primaryButtonClass}
+                            disabled={!canSaveEditedCategory}
+                          >
                             Save changes
                           </button>
                           <button
