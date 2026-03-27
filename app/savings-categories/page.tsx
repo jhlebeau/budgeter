@@ -30,14 +30,18 @@ function SectionCard({
   title,
   description,
   children,
+  className,
+  contentClassName,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
 }) {
   return (
-    <section className={`${surfaceClass} p-6 sm:p-7`}>
+    <section className={`${surfaceClass} p-6 sm:p-7 ${className ?? ""}`}>
       <div className="mb-6">
         <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
@@ -47,7 +51,7 @@ function SectionCard({
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
-      {children}
+      <div className={contentClassName}>{children}</div>
     </section>
   );
 }
@@ -228,15 +232,15 @@ export default function SavingsCategoriesPage() {
               </p>
             </div>
             <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-md">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Monthly income</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-emerald-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">Monthly income</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {currencyFormatter.format(monthlyIncome)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Savings goals</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-emerald-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">Savings goals</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {savingCategories.length}
                 </p>
               </div>
@@ -348,44 +352,44 @@ export default function SavingsCategoriesPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+              <div className="rounded-2xl border border-emerald-400/25 bg-slate-900/70 p-5">
                 <div className="grid gap-3 md:grid-cols-4">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                       Monthly Income
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(monthlyIncome)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                       Planned Savings
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(totalBudgetedAmount)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                       Budgeted Spending
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(totalSpendingAmount)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                       Remaining
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(remainingAfterSpendingAndSaving)}
                     </p>
                   </div>
                 </div>
 
                 {newLimitType === "amount" && newAmountPeriod === "annual" ? (
-                  <p className="mt-4 text-sm text-slate-500">
+                  <p className="mt-4 text-sm text-slate-300">
                     Annual savings targets are converted to monthly values after saving.
                   </p>
                 ) : null}
@@ -397,9 +401,9 @@ export default function SavingsCategoriesPage() {
                 ) : null}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                 <div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-300">
                     New savings goals update the monthly plan immediately.
                   </p>
                   {saveError ? (
@@ -421,20 +425,22 @@ export default function SavingsCategoriesPage() {
             eyebrow="Goal List"
             title="Current savings categories"
             description="Review your active savings mix, adjust monthly and annual targets, and keep every goal visible in one clean planning view."
+            className="flex flex-col overflow-hidden xl:max-h-[calc(170vh-23.8rem)]"
+            contentClassName="flex min-h-0 flex-1 flex-col"
           >
             <div className="mb-5">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Total monthly target</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-emerald-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">Total monthly target</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {currencyFormatter.format(totalBudgetedAmount)}
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-slate-300">
                   {savingCategories.length} savings categories tracked
                 </p>
               </div>
             </div>
 
-            <ul className="space-y-4">
+            <ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-10 xl:pr-2">
               {savingCategories.map((category) => {
                 const monthlyTarget = getCategoryBudgetAmount(
                   category.limitType,
@@ -444,20 +450,20 @@ export default function SavingsCategoriesPage() {
                 return (
                   <li
                     key={category.id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
+                    className="rounded-3xl border border-emerald-400/25 bg-slate-900/72 p-5"
                   >
                     {editingCategory === category.id ? (
                       <div className="space-y-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200/70">
                               Editing savings goal
                             </p>
-                            <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                            <h3 className="mt-2 text-lg font-semibold text-slate-50">
                               {category.name}
                             </h3>
                           </div>
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                          <span className="rounded-full border border-emerald-400/25 bg-slate-950/80 px-3 py-1 text-xs font-medium text-emerald-200">
                             {editingLimitType === "amount" ? "Fixed target" : "Percent-based"}
                           </span>
                         </div>
@@ -537,7 +543,7 @@ export default function SavingsCategoriesPage() {
 
                         {editingLimitType === "amount" &&
                         editingAmountPeriod === "annual" ? (
-                          <p className="text-sm text-slate-500">
+                          <p className="text-sm text-slate-300">
                             Annual targets are converted to monthly values when saved.
                           </p>
                         ) : null}
@@ -571,51 +577,51 @@ export default function SavingsCategoriesPage() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg font-semibold text-slate-950">
+                              <h3 className="text-lg font-semibold text-slate-50">
                                 {category.name}
                               </h3>
-                              <span className="rounded-full bg-slate-200/70 px-3 py-1 text-xs font-medium text-slate-600">
+                              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300">
                                 {category.limitType === "amount" ? "Fixed target" : "Percent-based"}
                               </span>
                             </div>
-                            <p className="mt-2 text-sm text-slate-500">
+                            <p className="mt-2 text-sm text-slate-300">
                               {category.limitType === "amount"
                                 ? "Stored as a monthly savings target"
                                 : "Scales with current monthly income"}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-slate-500">Monthly target</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-950">
+                            <p className="text-sm text-slate-300">Monthly target</p>
+                            <p className="mt-1 text-2xl font-semibold text-slate-50">
                               {currencyFormatter.format(monthlyTarget)}
                             </p>
                           </div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                               Target Type
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {category.limitType === "amount" ? "Dollar amount" : "Percent"}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                               Entered Target
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {category.limitType === "amount"
                                 ? `${currencyFormatter.format(category.limitValue)} / month`
                                 : `${category.limitValue.toFixed(2)}%`}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <div className="rounded-2xl border border-emerald-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
                               Share of Income
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {monthlyIncome > 0
                                 ? `${((monthlyTarget / monthlyIncome) * 100).toFixed(2)}%`
                                 : "0.00%"}
@@ -647,7 +653,7 @@ export default function SavingsCategoriesPage() {
                                 setEditingLimit("");
                               }
                             }}
-                            className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                            className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
                             Delete
                           </button>
@@ -658,7 +664,7 @@ export default function SavingsCategoriesPage() {
                 );
               })}
               {savingCategories.length === 0 ? (
-                <li className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+                <li className="rounded-3xl border border-dashed border-emerald-400/25 bg-slate-900/60 p-8 text-center text-sm text-slate-300">
                   No savings categories yet. Add a goal to start turning monthly income
                   into a more deliberate savings plan.
                 </li>

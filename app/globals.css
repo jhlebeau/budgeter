@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #020617;
+  --foreground: #e5eefc;
 }
 
 @theme inline {
@@ -18,13 +18,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
   background-image:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.85), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(248, 250, 252, 0.3));
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 1));
   background-attachment: fixed;
 }
 
 ::selection {
-  background: rgba(14, 165, 233, 0.18);
+  background: rgba(125, 211, 252, 0.28);
 }
 
 /* Prevent long text from overflowing offscreen anywhere in the UI */

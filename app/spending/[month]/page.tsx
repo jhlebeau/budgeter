@@ -32,14 +32,18 @@ function SectionCard({
   title,
   description,
   children,
+  className,
+  contentClassName,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
 }) {
   return (
-    <section className={`${surfaceClass} p-6 sm:p-7`}>
+    <section className={`${surfaceClass} p-6 sm:p-7 ${className ?? ""}`}>
       <div className="mb-6">
         <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
@@ -49,7 +53,7 @@ function SectionCard({
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
-      {children}
+      <div className={contentClassName}>{children}</div>
     </section>
   );
 }
@@ -232,21 +236,21 @@ export default function SpendingMonthPage() {
                 {isValidMonth ? formatMonthLabel(month) : "Invalid Month"}
               </h1>
               <p className={`mt-4 max-w-2xl text-sm leading-6 sm:text-base ${theme.body}`}>
-                Review income, category spend, savings targets, and unassigned cash for
-                the selected month in a cleaner dashboard layout.
+                Compare income with savings targets and real spending, while monitoring
+                additional unassigned cash.
               </p>
             </div>
             {isValidMonth ? (
               <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-md">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-sm text-slate-500">Income this month</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">
+                <div className="rounded-2xl border border-rose-400/25 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-300">Income this month</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-50">
                     {currencyFormatter.format(monthlyIncome)}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                  <p className="text-sm text-slate-500">Total spent</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-950">
+                <div className="rounded-2xl border border-rose-400/25 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-300">Total spent</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-50">
                     {currencyFormatter.format(totalSpending)}
                   </p>
                 </div>
@@ -280,58 +284,58 @@ export default function SpendingMonthPage() {
               />
             </section>
 
-            <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+            <div className="grid gap-6">
               <SectionCard
                 eyebrow="Summary"
                 title="Monthly financial picture"
                 description="Use this summary to compare what came in, what was spent, what was planned, and what remains unassigned."
               >
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                       Income
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(monthlyIncome)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                       Spent
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(totalSpending)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                       Additional Budgeted Spending
                     </p>
                     <p
                       className={`mt-2 text-xl font-semibold ${
                         additionalBudgetedSpendingThisMonth < 0
                           ? "text-red-600"
-                          : "text-slate-950"
+                          : "text-slate-50"
                       }`}
                     >
                       {currencyFormatter.format(additionalBudgetedSpendingThisMonth)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                       Budgeted Savings
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(totalBudgetedSavings)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                       Unassigned Income
                     </p>
                     <p
                       className={`mt-2 text-xl font-semibold ${
-                        unassignedIncome < 0 ? "text-red-600" : "text-slate-950"
+                        unassignedIncome < 0 ? "text-red-600" : "text-slate-50"
                       }`}
                     >
                       {currencyFormatter.format(unassignedIncome)}
@@ -349,16 +353,16 @@ export default function SpendingMonthPage() {
                   {savingsByCategory.map((category) => (
                     <li
                       key={category.id}
-                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 text-sm"
+                      className="flex items-center justify-between rounded-2xl border border-rose-400/20 bg-slate-900/72 px-4 py-4 text-sm"
                     >
-                      <span className="font-medium text-slate-900">{category.name}</span>
-                      <span className="font-semibold text-slate-950">
+                      <span className="font-medium text-slate-100">{category.name}</span>
+                      <span className="font-semibold text-slate-50">
                         {currencyFormatter.format(category.amount)}
                       </span>
                     </li>
                   ))}
                   {savingsByCategory.length === 0 ? (
-                    <li className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-6 text-center text-sm text-slate-500">
+                    <li className="rounded-2xl border border-dashed border-rose-400/25 bg-slate-900/60 p-6 text-center text-sm text-slate-300">
                       No savings categories yet.
                     </li>
                   ) : null}
@@ -370,61 +374,63 @@ export default function SpendingMonthPage() {
               eyebrow="Breakdown"
               title="Spending by category"
               description="Open each category to compare current spend against its limit and see how much room is left this month."
+              className="overflow-hidden xl:max-h-[calc(200vh-28rem)]"
+              contentClassName="min-h-0"
             >
-              <ul className="space-y-4">
+              <ul className="space-y-4 overflow-y-auto pb-10 xl:max-h-[calc(200vh-38rem)] xl:pr-2">
                 {spendingByCategory.map((category) => (
                   <li
                     key={category.category}
-                    className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
+                    className="rounded-3xl border border-rose-400/25 bg-slate-900/72 p-5"
                   >
                     <details>
                       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-4">
                         <div>
-                          <p className="text-lg font-semibold text-slate-950">
+                          <p className="text-lg font-semibold text-slate-50">
                             {category.category}
                           </p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="mt-1 text-sm text-slate-300">
                             Current spending {currencyFormatter.format(category.currentSpend)}
                           </p>
                         </div>
                         <div className="text-right">
                           <p
                             className={`text-sm font-medium ${
-                              category.spendLeft < 0 ? "text-red-600" : "text-slate-700"
+                              category.spendLeft < 0 ? "text-red-600" : "text-slate-200"
                             }`}
                           >
                             Spend left this month:{" "}
                             {currencyFormatter.format(category.spendLeft)}
                           </p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
+                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-rose-200/60">
                             View details
                           </p>
                         </div>
                       </summary>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                             Current Spending
                           </p>
-                          <p className="mt-2 text-sm font-medium text-slate-900">
+                          <p className="mt-2 text-sm font-medium text-slate-100">
                             {currencyFormatter.format(category.currentSpend)}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                             Maximum Spend
                           </p>
-                          <p className="mt-2 text-sm font-medium text-slate-900">
+                          <p className="mt-2 text-sm font-medium text-slate-100">
                             {currencyFormatter.format(category.maxSpend)}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        <div className="rounded-2xl border border-rose-400/20 bg-slate-950/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-200/70">
                             Spend Left
                           </p>
                           <p
                             className={`mt-2 text-sm font-medium ${
-                              category.spendLeft < 0 ? "text-red-600" : "text-slate-900"
+                              category.spendLeft < 0 ? "text-red-600" : "text-slate-100"
                             }`}
                           >
                             {currencyFormatter.format(category.spendLeft)}
@@ -435,7 +441,7 @@ export default function SpendingMonthPage() {
                   </li>
                 ))}
                 {spendingByCategory.length === 0 ? (
-                  <li className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+                  <li className="rounded-3xl border border-dashed border-rose-400/25 bg-slate-900/60 p-8 text-center text-sm text-slate-300">
                     No spending categories yet.
                   </li>
                 ) : null}

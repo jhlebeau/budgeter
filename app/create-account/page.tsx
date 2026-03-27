@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppUser, useBudget } from "../budget-context";
 
 const inputClass =
-  "w-full rounded-2xl border border-orange-200/80 bg-white/90 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-200";
+  "w-full rounded-2xl border border-orange-400/25 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-orange-300 focus:ring-2 focus:ring-orange-400/25";
 
 export default function CreateAccountPage() {
   const router = useRouter();
@@ -18,7 +18,6 @@ export default function CreateAccountPage() {
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
-
     const trimmed = username.trim();
     if (!trimmed) {
       setError("Please enter a username.");
@@ -63,27 +62,27 @@ export default function CreateAccountPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,146,60,0.16),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(56,189,248,0.14),_transparent_28%),linear-gradient(180deg,_#fff7ed_0%,_#fffbeb_45%,_#f8fafc_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#111827_100%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-4xl items-center">
-        <section className="grid w-full gap-6 rounded-[2rem] border border-orange-100/80 bg-white/82 p-6 shadow-[0_30px_100px_-42px_rgba(194,65,12,0.4)] backdrop-blur-xl lg:grid-cols-[0.85fr_1.15fr] lg:p-8">
-          <div className="rounded-[1.75rem] bg-[linear-gradient(160deg,_#ea580c_0%,_#fb923c_48%,_#fdba74_100%)] p-6 text-white">
-            <Link href="/" className="text-sm font-medium text-white/80 transition hover:text-white">
+        <section className="grid w-full gap-6 rounded-[2rem] border border-orange-400/20 bg-slate-900/78 p-6 shadow-[0_30px_100px_-42px_rgba(194,65,12,0.45)] backdrop-blur-xl lg:grid-cols-[0.85fr_1.15fr] lg:p-8">
+          <div className="rounded-[1.75rem] bg-[linear-gradient(160deg,_rgba(234,88,12,0.22)_0%,_rgba(251,146,60,0.16)_48%,_rgba(253,186,116,0.12)_100%)] p-6 text-white border border-orange-400/20">
+            <Link href="/" className="text-sm font-medium text-orange-100/80 transition hover:text-white">
               Back to Login
             </Link>
-            <h1 className="mt-8 font-display text-4xl leading-none">Create a brighter workspace</h1>
-            <p className="mt-4 text-sm leading-7 text-orange-50">
-              Set up an account and jump straight into the refreshed budget flow.
+            <h1 className="mt-8 font-display text-4xl leading-none text-slate-50">Create your workspace</h1>
+            <p className="mt-4 text-sm leading-7 text-slate-200">
+              Set up an account to get started today.
             </p>
           </div>
 
           <div className="flex flex-col justify-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-700/60">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-200/70">
               New Account
             </p>
-            <h2 className="mt-3 font-display text-4xl leading-none text-slate-950">
+            <h2 className="mt-3 font-display text-4xl leading-none text-slate-50">
               Pick a username
             </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-sm leading-6 text-slate-300">
               Choose an alphanumeric username to start a new account.
             </p>
 
@@ -102,11 +101,11 @@ export default function CreateAccountPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:bg-orange-300"
+                className="inline-flex items-center justify-center rounded-2xl bg-orange-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-200 disabled:cursor-not-allowed disabled:bg-orange-900 disabled:text-orange-100"
               >
                 Confirm
               </button>
-              {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : null}
+              {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
             </form>
           </div>
         </section>

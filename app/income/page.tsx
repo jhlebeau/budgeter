@@ -167,8 +167,10 @@ const emptyForm: IncomeForm = {
 const surfaceClass = theme.surface;
 const inputClass = theme.input;
 const selectClass = inputClass;
-const subtleButtonClass = theme.subtleButton;
-const primaryButtonClass = theme.primaryButton;
+const subtleButtonClass =
+  "inline-flex items-center justify-center rounded-2xl border border-emerald-300/60 bg-black px-4 py-2.5 text-sm font-medium text-emerald-200 transition hover:bg-slate-900";
+const primaryButtonClass =
+  "inline-flex items-center justify-center rounded-2xl bg-blue-400 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-blue-300 disabled:cursor-not-allowed disabled:bg-blue-950 disabled:text-blue-100";
 
 const parseNonNegativeNumberInput = (value: string) => {
   const trimmed = value.trim();
@@ -277,14 +279,18 @@ function SectionCard({
   title,
   description,
   children,
+  className,
+  contentClassName,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
 }) {
   return (
-    <section className={`${surfaceClass} p-6 sm:p-7`}>
+    <section className={`${surfaceClass} p-6 sm:p-7 ${className ?? ""}`}>
       <div className="mb-6">
         <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
@@ -294,7 +300,7 @@ function SectionCard({
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
-      {children}
+      <div className={contentClassName}>{children}</div>
     </section>
   );
 }
@@ -633,7 +639,7 @@ export default function IncomePage() {
                 </div>
 
                 <div>
-                  <FieldLabel label="Amount cadence" />
+                  <FieldLabel label="Frequency" />
                   <select
                     value={form.period}
                     onChange={(event) =>
@@ -684,7 +690,7 @@ export default function IncomePage() {
                 </div>
 
                 <div className="flex items-end">
-                  <label className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <label className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-sky-400/25 bg-slate-900/78 px-4 py-3 text-sm text-slate-200">
                     <input
                       type="checkbox"
                       checked={form.hasEndMonth}
@@ -695,7 +701,7 @@ export default function IncomePage() {
                           endMonth: event.target.checked ? current.endMonth : "",
                         }))
                       }
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                      className="h-4 w-4 rounded border-sky-400/30 bg-slate-950 text-sky-300 focus:ring-sky-400/30"
                     />
                     Set an end month
                   </label>
@@ -717,7 +723,7 @@ export default function IncomePage() {
                 ) : null}
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+              <div className="rounded-2xl border border-sky-400/25 bg-slate-900/70 p-5">
                 <div className="grid gap-5 md:grid-cols-2">
                   <div>
                     <FieldLabel label="Income type" />
@@ -801,29 +807,29 @@ export default function IncomePage() {
                 </div>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
                       Net Monthly
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(postTaxPreview)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
                       Federal Rate
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {showAutoTaxPreview
                         ? `${autoTaxBreakdown.federalRate.toFixed(2)}%`
                         : "None"}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
                       State Rate
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {showAutoTaxPreview
                         ? `${autoTaxBreakdown.stateRate.toFixed(2)}%`
                         : "None"}
@@ -832,13 +838,13 @@ export default function IncomePage() {
                 </div>
 
                 {form.taxType === "pre" && form.taxMethod === "auto" ? (
-                  <p className="mt-4 text-sm leading-6 text-slate-500">
+                  <p className="mt-4 text-sm leading-6 text-slate-300">
                     Estimated combined tax rate:{" "}
-                    <span className="font-medium text-slate-700">
+                    <span className="font-medium text-slate-100">
                       {autoTaxBreakdown.combinedRate.toFixed(2)}%
                     </span>
                     {APPROXIMATED_GRADUATED_STATES.has(form.taxState) ? (
-                      <span className="ml-2 text-amber-700">
+                      <span className="ml-2 text-amber-300">
                         This state currently uses a simplified approximation.
                       </span>
                     ) : null}
@@ -846,9 +852,9 @@ export default function IncomePage() {
                 ) : null}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                 <div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-300">
                     Saved entries update the monthly summary immediately.
                   </p>
                   {submitError ? (
@@ -870,31 +876,34 @@ export default function IncomePage() {
             eyebrow="Portfolio"
             title="Tracked income sources"
             description="Review active and future sources, refine tax assumptions, and edit or remove entries without leaving the page."
+            className="flex h-full flex-col overflow-hidden xl:max-h-[calc(200vh-28rem)]"
+            contentClassName="flex min-h-0 flex-1 flex-col"
           >
-            <div className="mb-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Current month total</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  {currencyFormatter.format(totalMonthlyIncomeSummary.monthlyIncome)}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Federal {totalMonthlyIncomeSummary.federalRate.toFixed(2)}%,
-                  state {totalMonthlyIncomeSummary.stateRate.toFixed(2)}%
-                </p>
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="mb-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-sky-400/25 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-300">Current month total</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-50">
+                    {currencyFormatter.format(totalMonthlyIncomeSummary.monthlyIncome)}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    Federal {totalMonthlyIncomeSummary.federalRate.toFixed(2)}%,
+                    state {totalMonthlyIncomeSummary.stateRate.toFixed(2)}%
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-sky-400/25 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-300">Active this month</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-50">
+                    {activeIncomes.length}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    Based on the {currentMonthKey} start and end month windows
+                  </p>
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Active this month</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
-                  {activeIncomes.length}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Based on the {currentMonthKey} start and end month windows
-                </p>
-              </div>
-            </div>
 
-            <ul className="space-y-4">
-              {incomes.map((income) => {
+              <ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-10 xl:pr-2">
+                {incomes.map((income) => {
                 const itemAutoBreakdown =
                   income.taxType === "pre" &&
                   income.taxMethod === "auto" &&
@@ -916,20 +925,20 @@ export default function IncomePage() {
                 return (
                   <li
                     key={income.id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
+                    className="rounded-3xl border border-sky-400/25 bg-slate-900/72 p-5"
                   >
                     {editingId === income.id ? (
                       <div className="space-y-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/70">
                               Editing source
                             </p>
-                            <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                            <h3 className="mt-2 text-lg font-semibold text-slate-50">
                               {income.source}
                             </h3>
                           </div>
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                          <span className="rounded-full border border-sky-400/25 bg-slate-950/80 px-3 py-1 text-xs font-medium text-sky-200">
                             {income.taxType === "pre" ? "Pre-tax" : "Post-tax"}
                           </span>
                         </div>
@@ -976,7 +985,7 @@ export default function IncomePage() {
                           </div>
 
                           <div>
-                            <FieldLabel label="Amount cadence" />
+                            <FieldLabel label="Frequency" />
                             <select
                               value={editForm.period}
                               onChange={(event) =>
@@ -1009,7 +1018,7 @@ export default function IncomePage() {
                           </div>
 
                           <div className="flex items-end">
-                            <label className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                            <label className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl border border-sky-400/25 bg-slate-950/80 px-4 py-3 text-sm text-slate-200">
                               <input
                                 type="checkbox"
                                 checked={editForm.hasEndMonth}
@@ -1020,7 +1029,7 @@ export default function IncomePage() {
                                     endMonth: event.target.checked ? current.endMonth : "",
                                   }))
                                 }
-                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                                className="h-4 w-4 rounded border-sky-400/30 bg-slate-950 text-sky-300 focus:ring-sky-400/30"
                               />
                               Set an end month
                             </label>
@@ -1125,27 +1134,27 @@ export default function IncomePage() {
 
                         {editForm.taxType === "pre" && editForm.taxMethod === "auto" ? (
                           <div className="grid gap-3 md:grid-cols-3">
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
                                 Combined
                               </p>
-                              <p className="mt-2 text-lg font-semibold text-slate-950">
+                              <p className="mt-2 text-lg font-semibold text-slate-50">
                                 {editAutoBreakdown.combinedRate.toFixed(2)}%
                               </p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
                                 Federal
                               </p>
-                              <p className="mt-2 text-lg font-semibold text-slate-950">
+                              <p className="mt-2 text-lg font-semibold text-slate-50">
                                 {editAutoBreakdown.federalRate.toFixed(2)}%
                               </p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
                                 State
                               </p>
-                              <p className="mt-2 text-lg font-semibold text-slate-950">
+                              <p className="mt-2 text-lg font-semibold text-slate-50">
                                 {editAutoBreakdown.stateRate.toFixed(2)}%
                               </p>
                             </div>
@@ -1155,7 +1164,7 @@ export default function IncomePage() {
                         {editForm.taxType === "pre" &&
                         editForm.taxMethod === "auto" &&
                         APPROXIMATED_GRADUATED_STATES.has(editForm.taxState) ? (
-                          <p className="text-sm text-amber-700">
+                          <p className="text-sm text-amber-300">
                             This state currently uses a simplified tax approximation.
                           </p>
                         ) : null}
@@ -1199,70 +1208,70 @@ export default function IncomePage() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg font-semibold text-slate-950">
+                              <h3 className="text-lg font-semibold text-slate-50">
                                 {income.source}
                               </h3>
                               <span
                                 className={`rounded-full px-3 py-1 text-xs font-medium ${
                                   isActive
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "bg-slate-200/70 text-slate-600"
+                                    ? "bg-emerald-500/15 text-emerald-200"
+                                    : "bg-slate-800 text-slate-300"
                                 }`}
                               >
                                 {isActive ? "Active" : "Inactive"}
                               </span>
-                              <span className="rounded-full bg-slate-200/70 px-3 py-1 text-xs font-medium text-slate-600">
+                              <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300">
                                 {income.taxType === "pre" ? "Pre-tax" : "Post-tax"}
                               </span>
                             </div>
-                            <p className="mt-2 text-sm text-slate-500">
+                            <p className="mt-2 text-sm text-slate-300">
                               {income.period === "annual" ? "Annual" : "Monthly"} input of{" "}
                               {currencyFormatter.format(income.inputAmount)}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-slate-500">Net monthly value</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-950">
+                            <p className="text-sm text-slate-300">Net monthly value</p>
+                            <p className="mt-1 text-2xl font-semibold text-slate-50">
                               {currencyFormatter.format(income.postTaxAmount)}
                             </p>
                           </div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-200/70">
                               Schedule
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {income.startMonth}
                               {income.endMonth ? ` to ${income.endMonth}` : " onward"}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-200/70">
                               Tax Rate
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {income.taxType === "pre"
                                 ? `${income.taxRate.toFixed(2)}%`
                                 : "Not applicable"}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-200/70">
                               Federal
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {itemAutoBreakdown
                                 ? `${itemAutoBreakdown.federalRate.toFixed(2)}%`
                                 : "Included"}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-200/70">
                               State
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className="mt-2 text-sm font-medium text-slate-100">
                               {income.taxType === "pre" && income.taxMethod === "auto" && income.taxState
                                 ? `${TAX_STATE_LABELS[income.taxState]} • ${itemAutoBreakdown?.stateRate.toFixed(2)}%`
                                 : income.taxType === "pre"
@@ -1276,7 +1285,7 @@ export default function IncomePage() {
                         income.taxMethod === "auto" &&
                         income.taxState &&
                         APPROXIMATED_GRADUATED_STATES.has(income.taxState) ? (
-                          <p className="text-sm text-amber-700">
+                          <p className="text-sm text-amber-300">
                             This source uses a simplified state tax approximation.
                           </p>
                         ) : null}
@@ -1298,7 +1307,7 @@ export default function IncomePage() {
                               if (!shouldDelete) return;
                               await deleteIncome(income.id);
                             }}
-                            className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                            className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
                             Delete
                           </button>
@@ -1307,14 +1316,15 @@ export default function IncomePage() {
                     )}
                   </li>
                 );
-              })}
-              {incomes.length === 0 ? (
-                <li className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
-                  No income sources yet. Add your first source to start building a cleaner
-                  cash flow view.
-                </li>
-              ) : null}
-            </ul>
+                })}
+                {incomes.length === 0 ? (
+                  <li className="rounded-3xl border border-dashed border-sky-400/25 bg-slate-900/60 p-8 text-center text-sm text-slate-300">
+                    No income sources yet. Add your first source to start building a cleaner
+                    cash flow view.
+                  </li>
+                ) : null}
+              </ul>
+            </div>
           </SectionCard>
         </div>
       </div>

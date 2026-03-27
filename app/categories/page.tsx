@@ -31,14 +31,18 @@ function SectionCard({
   title,
   description,
   children,
+  className,
+  contentClassName,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
 }) {
   return (
-    <section className={`${surfaceClass} p-6 sm:p-7`}>
+    <section className={`${surfaceClass} p-6 sm:p-7 ${className ?? ""}`}>
       <div className="mb-6">
         <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
@@ -48,7 +52,7 @@ function SectionCard({
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
-      {children}
+      <div className={contentClassName}>{children}</div>
     </section>
   );
 }
@@ -365,7 +369,7 @@ export default function CategoriesPage() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                 <div>
                   <p className={`text-sm ${theme.body}`}>
                     New categories appear immediately in your budget setup.
@@ -389,6 +393,8 @@ export default function CategoriesPage() {
             eyebrow="Category List"
             title="Current spending categories"
             description="Review your active allocation plan, switch between fixed amounts and percentages, and refine limits without leaving the dashboard."
+            className="flex flex-col overflow-hidden xl:max-h-[calc(170vh-23.8rem)]"
+            contentClassName="flex min-h-0 flex-1 flex-col"
           >
             <div className="mb-5">
               <div className={`${theme.card} p-4`}>
@@ -402,7 +408,7 @@ export default function CategoriesPage() {
               </div>
             </div>
 
-            <ul className="space-y-4">
+            <ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-10 xl:pr-2">
               {visibleCategories.map((category) => {
                 const budgetAmount = getCategoryBudgetAmount(
                   category.limitType,
@@ -589,7 +595,7 @@ export default function CategoriesPage() {
                                 setEditingLimit("");
                               }
                             }}
-                            className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                            className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
                             Delete
                           </button>

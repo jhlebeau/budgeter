@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useBudget } from "./budget-context";
 
 const inputClass =
-  "w-full rounded-2xl border border-cyan-200/80 bg-white/90 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-200";
+  "w-full rounded-2xl border border-cyan-400/25 bg-slate-950/90 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/25";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -63,45 +63,31 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[linear-gradient(135deg,_#ecfeff_0%,_#f0f9ff_38%,_#fff7ed_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+    <main className="min-h-screen overflow-hidden bg-[linear-gradient(135deg,_#020617_0%,_#0f172a_48%,_#111827_100%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-slate-950 px-6 py-8 text-white shadow-[0_32px_100px_-40px_rgba(8,47,73,0.8)] sm:px-8 sm:py-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(103,232,249,0.34),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(251,146,60,0.26),_transparent_30%)]" />
+        <section className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-slate-950/70 px-6 py-8 text-white shadow-[0_32px_100px_-40px_rgba(8,47,73,0.9)] sm:px-8 sm:py-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(103,232,249,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(251,146,60,0.18),_transparent_30%)]" />
           <div className="relative">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-100/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/80">
               Budget Tracker
             </p>
-            <h1 className="mt-6 max-w-lg font-display text-5xl leading-none sm:text-6xl">
-              Brighter money planning, without the noise.
+            <h1 className="mt-6 max-w-lg font-display text-5xl leading-none text-slate-50 sm:text-6xl">
+              Take control of your money, month by month.
             </h1>
             <p className="mt-5 max-w-xl text-sm leading-7 text-slate-200 sm:text-base">
-              The budgeting tools stay practical, but the experience no longer has to feel
-              flat. Sign in to pick up where you left off.
+              Track income, manage spending, and see how each month stacks up against your
+              goals.
             </p>
-            <div className="mt-10 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/70">Income</p>
-                <p className="mt-2 text-sm text-slate-100">Cleaner planning dashboards</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.24em] text-orange-100/70">Setup</p>
-                <p className="mt-2 text-sm text-slate-100">Sharper paths through each task</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.24em] text-sky-100/70">Reports</p>
-                <p className="mt-2 text-sm text-slate-100">More expressive monthly snapshots</p>
-              </div>
-            </div>
           </div>
         </section>
 
-        <section className="relative rounded-[2rem] border border-cyan-100/80 bg-white/82 p-6 shadow-[0_32px_100px_-40px_rgba(14,116,144,0.45)] backdrop-blur-xl sm:p-8">
-          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300 to-transparent" />
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700/60">
+        <section className="relative rounded-[2rem] border border-cyan-400/20 bg-slate-900/78 p-6 shadow-[0_32px_100px_-40px_rgba(14,116,144,0.45)] backdrop-blur-xl sm:p-8">
+          <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/80 to-transparent" />
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/75">
             Welcome Back
           </p>
-          <h2 className="mt-3 font-display text-4xl leading-none text-slate-950">Log in</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <h2 className="mt-3 font-display text-4xl leading-none text-slate-50">Log in</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
             Continue with your username or create a new account.
           </p>
 
@@ -121,7 +107,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-cyan-300"
+                className="inline-flex items-center justify-center rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-900 disabled:text-cyan-100"
               >
                 Log In
               </button>
@@ -129,12 +115,12 @@ export default function LoginPage() {
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => router.push("/create-account")}
-                className="inline-flex items-center justify-center rounded-2xl border border-orange-200 bg-orange-50/70 px-4 py-3 text-sm font-medium text-orange-950 transition hover:bg-orange-100 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center rounded-2xl border border-orange-400/25 bg-slate-950/80 px-4 py-3 text-sm font-medium text-orange-200 transition hover:bg-orange-950/40 disabled:cursor-not-allowed"
               >
                 Create Account
               </button>
             </div>
-            {error ? <p className="text-sm font-medium text-rose-600">{error}</p> : null}
+            {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
           </form>
         </section>
       </div>

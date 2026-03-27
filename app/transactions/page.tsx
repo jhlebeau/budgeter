@@ -58,14 +58,18 @@ function SectionCard({
   title,
   description,
   children,
+  className,
+  contentClassName,
 }: {
   eyebrow: string;
   title: string;
   description?: string;
   children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
 }) {
   return (
-    <section className={`${surfaceClass} p-6 sm:p-7`}>
+    <section className={`${surfaceClass} p-6 sm:p-7 ${className ?? ""}`}>
       <div className="mb-6">
         <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
@@ -75,7 +79,7 @@ function SectionCard({
           <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
-      {children}
+      <div className={contentClassName}>{children}</div>
     </section>
   );
 }
@@ -263,15 +267,15 @@ export default function TransactionsPage() {
               </p>
             </div>
             <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-md">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">This month</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">This month</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {currencyFormatter.format(monthSpend)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Transactions tracked</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">Transactions tracked</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {transactions.length}
                 </p>
               </div>
@@ -368,9 +372,9 @@ export default function TransactionsPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <label className="flex min-h-[52px] items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <label className="flex min-h-[52px] items-center gap-3 rounded-2xl border border-violet-400/25 bg-slate-950/80 px-4 py-3 text-sm text-slate-200">
                     <input
                       type="checkbox"
                       checked={form.isRecurring}
@@ -380,7 +384,7 @@ export default function TransactionsPage() {
                           isRecurring: event.target.checked,
                         }))
                       }
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                      className="h-4 w-4 rounded border-violet-400/30 bg-slate-950 text-violet-300 focus:ring-violet-400/30"
                     />
                     Make this recurring
                   </label>
@@ -410,20 +414,20 @@ export default function TransactionsPage() {
                 </div>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-1">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className="rounded-2xl border border-violet-400/20 bg-slate-950/85 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">
                       This Month
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className="mt-2 text-xl font-semibold text-slate-50">
                       {currencyFormatter.format(monthSpend)}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5">
                 <div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-300">
                     Saved transactions appear in the ledger immediately.
                   </p>
                   {submitError ? (
@@ -445,46 +449,48 @@ export default function TransactionsPage() {
             eyebrow="Ledger"
             title="Transaction history"
             description="Review and update one-time or recurring entries in a cleaner ledger view, including scope controls for recurring series."
+            className="flex flex-col overflow-hidden xl:max-h-[calc(170vh-23.8rem)]"
+            contentClassName="flex min-h-0 flex-1 flex-col"
           >
             <div className="mb-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Current month total</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">Current month total</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {currencyFormatter.format(monthSpend)}
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-slate-300">
                   {monthTransactions.length} transactions logged this month
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Recurring series entries</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
+                <p className="text-sm text-slate-300">Recurring series entries</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-50">
                   {activeRecurringSeriesCount}
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
+                <p className="mt-2 text-sm text-slate-300">
                   Unique active series across daily, weekly, and monthly schedules
                 </p>
               </div>
             </div>
 
-            <ul className="space-y-4">
+            <ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-10 xl:pr-2">
               {transactions.map((transaction) => (
                 <li
                   key={transaction.id}
-                  className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
+                  className="rounded-3xl border border-violet-400/25 bg-slate-900/72 p-5"
                 >
                   {editingId === transaction.id ? (
                     <div className="space-y-5">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200/70">
                             Editing transaction
                           </p>
-                          <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                          <h3 className="mt-2 text-lg font-semibold text-slate-50">
                             {currencyFormatter.format(transaction.amount)}
                           </h3>
                         </div>
-                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                        <span className="rounded-full border border-violet-400/25 bg-slate-950/80 px-3 py-1 text-xs font-medium text-violet-200">
                           {transaction.recurringSeriesId ? "Recurring" : "One-time"}
                         </span>
                       </div>
@@ -671,14 +677,14 @@ export default function TransactionsPage() {
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-lg font-semibold text-slate-950">
+                            <h3 className="text-lg font-semibold text-slate-50">
                               {currencyFormatter.format(transaction.amount)}
                             </h3>
-                            <span className="rounded-full bg-slate-200/70 px-3 py-1 text-xs font-medium text-slate-600">
+                            <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300">
                               {transaction.categoryName}
                             </span>
                             {transaction.recurringSeriesId ? (
-                              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-200">
                                 Recurring
                               </span>
                             ) : null}
@@ -686,8 +692,8 @@ export default function TransactionsPage() {
                               <span
                                 className={`rounded-full px-3 py-1 text-xs font-medium ${
                                   transaction.recurringSeriesStatus === "active"
-                                    ? "bg-sky-50 text-sky-700"
-                                    : "bg-amber-50 text-amber-700"
+                                    ? "bg-sky-500/15 text-sky-200"
+                                    : "bg-amber-500/15 text-amber-200"
                                 }`}
                               >
                                 {transaction.recurringSeriesStatus === "active"
@@ -696,13 +702,13 @@ export default function TransactionsPage() {
                               </span>
                             ) : null}
                           </div>
-                          <p className="mt-2 text-sm text-slate-500">
+                          <p className="mt-2 text-sm text-slate-300">
                             {dateFormatter.format(new Date(`${transaction.date}T00:00:00`))}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-slate-500">Type</p>
-                          <p className="mt-1 text-base font-semibold text-slate-950">
+                          <p className="text-sm text-slate-300">Type</p>
+                          <p className="mt-1 text-base font-semibold text-slate-50">
                             {transaction.recurringSeriesId
                               ? transaction.recurrenceFrequency
                               : "one-time"}
@@ -711,27 +717,27 @@ export default function TransactionsPage() {
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        <div className="rounded-2xl border border-violet-400/20 bg-slate-950/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">
                             Category
                           </p>
-                          <p className="mt-2 text-sm font-medium text-slate-900">
+                          <p className="mt-2 text-sm font-medium text-slate-100">
                             {transaction.categoryName}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        <div className="rounded-2xl border border-violet-400/20 bg-slate-950/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">
                             Date
                           </p>
-                          <p className="mt-2 text-sm font-medium text-slate-900">
+                          <p className="mt-2 text-sm font-medium text-slate-100">
                             {transaction.date}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        <div className="rounded-2xl border border-violet-400/20 bg-slate-950/85 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200/70">
                             Recurrence
                           </p>
-                          <p className="mt-2 text-sm font-medium text-slate-900">
+                          <p className="mt-2 text-sm font-medium text-slate-100">
                             {transaction.recurringSeriesId
                               ? transaction.recurrenceFrequency
                               : "Not recurring"}
@@ -740,7 +746,7 @@ export default function TransactionsPage() {
                       </div>
 
                       {transaction.note ? (
-                        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
+                        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-300">
                           {transaction.note}
                         </p>
                       ) : null}
@@ -766,7 +772,7 @@ export default function TransactionsPage() {
                                   await deleteTransaction(transaction.id, "this");
                                   setDeleteScopeForId(null);
                                 }}
-                                className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                               >
                                 Delete this
                               </button>
@@ -780,7 +786,7 @@ export default function TransactionsPage() {
                                   await deleteTransaction(transaction.id, "future");
                                   setDeleteScopeForId(null);
                                 }}
-                                className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                               >
                                 Delete this and following
                               </button>
@@ -794,7 +800,7 @@ export default function TransactionsPage() {
                                   await deleteTransaction(transaction.id, "all");
                                   setDeleteScopeForId(null);
                                 }}
-                                className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                               >
                                 Delete all
                               </button>
@@ -810,7 +816,7 @@ export default function TransactionsPage() {
                             <button
                               type="button"
                               onClick={() => setDeleteScopeForId(transaction.id)}
-                              className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                              className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                             >
                               Delete
                             </button>
@@ -823,7 +829,7 @@ export default function TransactionsPage() {
                               if (!shouldDelete) return;
                               await deleteTransaction(transaction.id, "this");
                             }}
-                            className="inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                            className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
                             Delete
                           </button>
@@ -834,7 +840,7 @@ export default function TransactionsPage() {
                 </li>
               ))}
               {transactions.length === 0 ? (
-                <li className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+                <li className="rounded-3xl border border-dashed border-violet-400/25 bg-slate-900/60 p-8 text-center text-sm text-slate-300">
                   No transactions yet. Add your first transaction to start building a
                   cleaner spending history.
                 </li>
