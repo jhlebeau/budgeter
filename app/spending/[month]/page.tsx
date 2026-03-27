@@ -286,7 +286,7 @@ export default function SpendingMonthPage() {
                 title="Monthly financial picture"
                 description="Use this summary to compare what came in, what was spent, what was planned, and what remains unassigned."
               >
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                       Income
