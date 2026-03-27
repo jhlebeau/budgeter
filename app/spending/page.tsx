@@ -10,9 +10,6 @@ const monthFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const surfaceClass =
-  "rounded-3xl border border-slate-200/80 bg-white/90 shadow-[0_18px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur";
-
 const formatMonthLabel = (monthKey: string) => {
   const [yearText, monthText] = monthKey.split("-");
   const year = Number(yearText);
@@ -48,36 +45,36 @@ export default function SpendingPage() {
   }, [currentMonthKey, transactions]);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),_transparent_36%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <div className={`${surfaceClass} p-6 sm:p-8`}>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(244,114,182,0.16),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(56,189,248,0.14),_transparent_28%),linear-gradient(180deg,_#fff7fb_0%,_#fdf2f8_45%,_#f8fafc_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <section className="rounded-[2rem] border border-rose-100/80 bg-white/82 p-6 shadow-[0_30px_100px_-42px_rgba(190,24,93,0.32)] backdrop-blur-xl sm:p-8">
           <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-            <Link href="/home" className="text-slate-500 transition hover:text-slate-900">
+            <Link href="/home" className="text-rose-800/70 transition hover:text-rose-950">
               Home
             </Link>
           </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-rose-700/60">
             Spending Reports
           </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
+          <h1 className="mt-3 font-display text-5xl leading-none text-slate-950">
             Select a month
           </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
+          <p className="mt-4 text-sm leading-7 text-slate-600">
             Choose a month to view the spending report.
           </p>
+        </section>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {months.map((monthKey) => (
-              <Link
-                key={monthKey}
-                href={`/spending/${monthKey}`}
-                className="rounded-3xl border border-slate-200 bg-slate-50/70 px-5 py-5 text-sm font-medium text-slate-900 transition hover:border-slate-300 hover:bg-white"
-              >
-                {formatMonthLabel(monthKey)}
-              </Link>
-            ))}
-          </div>
-        </div>
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {months.map((monthKey) => (
+            <Link
+              key={monthKey}
+              href={`/spending/${monthKey}`}
+              className="rounded-[1.75rem] border border-rose-200/80 bg-white/80 p-6 text-sm font-medium text-slate-900 shadow-[0_18px_60px_-40px_rgba(190,24,93,0.35)] transition hover:-translate-y-1 hover:border-rose-300 hover:bg-rose-50/80"
+            >
+              {formatMonthLabel(monthKey)}
+            </Link>
+          ))}
+        </section>
       </div>
     </main>
   );

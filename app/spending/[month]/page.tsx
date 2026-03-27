@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { useBudget } from "../../budget-context";
 import { isMonthInRange } from "@/lib/month-utils";
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
+import { reportsTheme as theme } from "../../ui/dashboard-theme";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -17,8 +18,7 @@ const monthFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const surfaceClass =
-  "rounded-3xl border border-slate-200/80 bg-white/90 shadow-[0_18px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur";
+const surfaceClass = theme.surface;
 
 const formatMonthLabel = (monthKey: string) => {
   const [yearText, monthText] = monthKey.split("-");
@@ -41,12 +41,12 @@ function SectionCard({
   return (
     <section className={`${surfaceClass} p-6 sm:p-7`}>
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+        <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
         </p>
-        <h2 className="mt-2 text-xl font-semibold text-slate-950">{title}</h2>
+        <h2 className={`mt-2 text-xl font-semibold ${theme.heading}`}>{title}</h2>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+          <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
       {children}
@@ -65,9 +65,9 @@ function MetricCard({
 }) {
   return (
     <div className={`${surfaceClass} p-5`}>
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
-      <p className="mt-2 text-sm text-slate-500">{detail}</p>
+      <p className={`text-sm font-medium ${theme.metricLabel}`}>{label}</p>
+      <p className={`mt-3 text-2xl font-semibold tracking-tight ${theme.heading}`}>{value}</p>
+      <p className={`mt-2 text-sm ${theme.body}`}>{detail}</p>
     </div>
   );
 }
@@ -211,27 +211,27 @@ export default function SpendingMonthPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),_transparent_36%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+    <main className={theme.page}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className={`${surfaceClass} overflow-hidden p-6 sm:p-8`}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-                <Link href="/spending" className="text-slate-500 transition hover:text-slate-900">
+                <Link href="/spending" className={theme.breadcrumb}>
                   Spending Reports
                 </Link>
-                <span className="text-slate-300">/</span>
-                <Link href="/home" className="text-slate-500 transition hover:text-slate-900">
+                <span className={theme.hint}>/</span>
+                <Link href="/home" className={theme.breadcrumb}>
                   Home
                 </Link>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+              <p className={`text-xs font-semibold uppercase tracking-[0.28em] ${theme.eyebrow}`}>
                 Monthly Spending Report
               </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${theme.heading}`}>
                 {isValidMonth ? formatMonthLabel(month) : "Invalid Month"}
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              <p className={`mt-4 max-w-2xl text-sm leading-6 sm:text-base ${theme.body}`}>
                 Review income, category spend, savings targets, and unassigned cash for
                 the selected month in a cleaner dashboard layout.
               </p>

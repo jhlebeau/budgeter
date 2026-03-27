@@ -6,21 +6,18 @@ import { Category, useBudget } from "../budget-context";
 import { getCurrentMonthKey, isMonthInRange } from "@/lib/month-utils";
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 import { ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE } from "@/lib/input-validation";
+import { categoriesTheme as theme } from "../ui/dashboard-theme";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 });
 
-const surfaceClass =
-  "rounded-3xl border border-slate-200/80 bg-white/90 shadow-[0_18px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur";
-const inputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200";
+const surfaceClass = theme.surface;
+const inputClass = theme.input;
 const selectClass = inputClass;
-const subtleButtonClass =
-  "inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50";
-const primaryButtonClass =
-  "inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800";
+const subtleButtonClass = theme.subtleButton;
+const primaryButtonClass = theme.primaryButton;
 
 const parseNonNegativeNumberInput = (value: string) => {
   const trimmed = value.trim();
@@ -43,12 +40,12 @@ function SectionCard({
   return (
     <section className={`${surfaceClass} p-6 sm:p-7`}>
       <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+        <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${theme.eyebrow}`}>
           {eyebrow}
         </p>
-        <h2 className="mt-2 text-xl font-semibold text-slate-950">{title}</h2>
+        <h2 className={`mt-2 text-xl font-semibold ${theme.heading}`}>{title}</h2>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+          <p className={`mt-2 max-w-2xl text-sm leading-6 ${theme.body}`}>{description}</p>
         ) : null}
       </div>
       {children}
@@ -65,8 +62,8 @@ function FieldLabel({
 }) {
   return (
     <div className="mb-2 flex items-center justify-between gap-3">
-      <label className="text-sm font-medium text-slate-700">{label}</label>
-      {hint ? <span className="text-xs text-slate-400">{hint}</span> : null}
+      <label className={`text-sm font-medium ${theme.label}`}>{label}</label>
+      {hint ? <span className={`text-xs ${theme.hint}`}>{hint}</span> : null}
     </div>
   );
 }
@@ -82,9 +79,9 @@ function MetricCard({
 }) {
   return (
     <div className={`${surfaceClass} p-5`}>
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
-      <p className="mt-2 text-sm text-slate-500">{detail}</p>
+      <p className={`text-sm font-medium ${theme.metricLabel}`}>{label}</p>
+      <p className={`mt-3 text-2xl font-semibold tracking-tight ${theme.heading}`}>{value}</p>
+      <p className={`mt-2 text-sm ${theme.body}`}>{detail}</p>
     </div>
   );
 }
@@ -190,41 +187,41 @@ export default function CategoriesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.16),_transparent_36%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+    <main className={theme.page}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <header className={`${surfaceClass} overflow-hidden p-6 sm:p-8`}>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-                <Link href="/setup" className="text-slate-500 transition hover:text-slate-900">
+                <Link href="/setup" className={theme.breadcrumb}>
                   Setup
                 </Link>
-                <span className="text-slate-300">/</span>
-                <Link href="/home" className="text-slate-500 transition hover:text-slate-900">
+                <span className={theme.hint}>/</span>
+                <Link href="/home" className={theme.breadcrumb}>
                   Home
                 </Link>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+              <p className={`text-xs font-semibold uppercase tracking-[0.28em] ${theme.eyebrow}`}>
                 Spending Dashboard
               </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+              <h1 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${theme.heading}`}>
                 Shape spending with cleaner category planning
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
+              <p className={`mt-4 max-w-2xl text-sm leading-6 sm:text-base ${theme.body}`}>
                 Create clear spending buckets, mix fixed limits with income-based
                 percentages, and keep your monthly plan grounded in available cash flow.
               </p>
             </div>
             <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-md">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Monthly income</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className={`${theme.card} p-4`}>
+                <p className={`text-sm ${theme.metricLabel}`}>Monthly income</p>
+                <p className={`mt-2 text-2xl font-semibold ${theme.heading}`}>
                   {currencyFormatter.format(monthlyIncome)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Categories tracked</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className={`${theme.card} p-4`}>
+                <p className={`text-sm ${theme.metricLabel}`}>Categories tracked</p>
+                <p className={`mt-2 text-2xl font-semibold ${theme.heading}`}>
                   {visibleCategories.length}
                 </p>
               </div>
@@ -320,37 +317,37 @@ export default function CategoriesPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+              <div className={`${theme.card} p-5`}>
                 <div className="grid gap-3 md:grid-cols-4">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                       Monthly Income
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className={`mt-2 text-xl font-semibold ${theme.heading}`}>
                       {currencyFormatter.format(monthlyIncome)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                       Spending Budgeted So Far
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className={`mt-2 text-xl font-semibold ${theme.heading}`}>
                       {currencyFormatter.format(totalBudgetedAmount)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                       Budgeted Savings
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className={`mt-2 text-xl font-semibold ${theme.heading}`}>
                       {currencyFormatter.format(totalSavingsAmount)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                       Remaining
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-slate-950">
+                    <p className={`mt-2 text-xl font-semibold ${theme.heading}`}>
                       {currencyFormatter.format(remainingAfterSpendingAndSaving)}
                     </p>
                   </div>
@@ -361,7 +358,7 @@ export default function CategoriesPage() {
                     Current spending limits exceed monthly income.
                   </p>
                 ) : (
-                  <p className="mt-4 text-sm text-slate-500">
+                  <p className={`mt-4 text-sm ${theme.body}`}>
                     Keep fixed and percentage-based categories balanced so the plan remains
                     realistic.
                   </p>
@@ -370,7 +367,7 @@ export default function CategoriesPage() {
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
                 <div>
-                  <p className="text-sm text-slate-500">
+                  <p className={`text-sm ${theme.body}`}>
                     New categories appear immediately in your budget setup.
                   </p>
                   {submitError ? (
@@ -394,12 +391,12 @@ export default function CategoriesPage() {
             description="Review your active allocation plan, switch between fixed amounts and percentages, and refine limits without leaving the dashboard."
           >
             <div className="mb-5">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                <p className="text-sm text-slate-500">Current plan total</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-950">
+              <div className={`${theme.card} p-4`}>
+                <p className={`text-sm ${theme.metricLabel}`}>Current plan total</p>
+                <p className={`mt-2 text-2xl font-semibold ${theme.heading}`}>
                   {currencyFormatter.format(totalBudgetedAmount)}
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
+                <p className={`mt-2 text-sm ${theme.body}`}>
                   {visibleCategories.length} tracked categories
                 </p>
               </div>
@@ -415,20 +412,20 @@ export default function CategoriesPage() {
                 return (
                   <li
                     key={category.id}
-                    className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
+                    className={`${theme.card} rounded-3xl p-5`}
                   >
                     {editingCategory === category.id ? (
                       <div className="space-y-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${theme.eyebrow}`}>
                               Editing category
                             </p>
-                            <h3 className="mt-2 text-lg font-semibold text-slate-950">
+                            <h3 className={`mt-2 text-lg font-semibold ${theme.heading}`}>
                               {category.name}
                             </h3>
                           </div>
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-500">
+                          <span className={theme.pill}>
                             {editingLimitType === "amount" ? "Fixed amount" : "Percent-based"}
                           </span>
                         </div>
@@ -470,7 +467,7 @@ export default function CategoriesPage() {
                             />
                             <div className="relative">
                               {editingLimitType === "amount" ? (
-                                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                                <span className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm ${theme.hint}`}>
                                   $
                                 </span>
                               ) : null}
@@ -516,51 +513,51 @@ export default function CategoriesPage() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="text-lg font-semibold text-slate-950">
+                              <h3 className={`text-lg font-semibold ${theme.heading}`}>
                                 {category.name}
                               </h3>
-                              <span className="rounded-full bg-slate-200/70 px-3 py-1 text-xs font-medium text-slate-600">
+                              <span className={theme.pill}>
                                 {category.limitType === "amount" ? "Fixed amount" : "Percent-based"}
                               </span>
                             </div>
-                            <p className="mt-2 text-sm text-slate-500">
+                            <p className={`mt-2 text-sm ${theme.body}`}>
                               {category.limitType === "amount"
                                 ? "Direct monthly cap"
                                 : "Scaled to current monthly income"}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-slate-500">Budgeted amount</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-950">
+                            <p className={`text-sm ${theme.metricLabel}`}>Budgeted amount</p>
+                            <p className={`mt-1 text-2xl font-semibold ${theme.heading}`}>
                               {currencyFormatter.format(budgetAmount)}
                             </p>
                           </div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                            <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                               Limit Type
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className={`mt-2 text-sm font-medium ${theme.heading}`}>
                               {category.limitType === "amount" ? "Dollar amount" : "Percent"}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                            <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                               Entered Limit
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className={`mt-2 text-sm font-medium ${theme.heading}`}>
                               {category.limitType === "amount"
                                 ? currencyFormatter.format(category.limitValue)
                                 : `${category.limitValue.toFixed(2)}%`}
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <div className={`${theme.surface} rounded-2xl p-4 shadow-none`}>
+                            <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${theme.eyebrow}`}>
                               Share of Income
                             </p>
-                            <p className="mt-2 text-sm font-medium text-slate-900">
+                            <p className={`mt-2 text-sm font-medium ${theme.heading}`}>
                               {monthlyIncome > 0
                                 ? `${((budgetAmount / monthlyIncome) * 100).toFixed(2)}%`
                                 : "0.00%"}
@@ -603,7 +600,7 @@ export default function CategoriesPage() {
                 );
               })}
               {visibleCategories.length === 0 ? (
-                <li className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+                <li className={theme.emptyState}>
                   No spending categories yet. Add a category to start shaping how your
                   monthly income gets allocated.
                 </li>
