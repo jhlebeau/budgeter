@@ -3,6 +3,7 @@
 import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useBudget } from "./budget-context";
+import { SiteNav } from "./ui/site-nav";
 
 const PUBLIC_PATHS = new Set(["/", "/create-account"]);
 
@@ -23,6 +24,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return null;
   }
 
-  return <>{children}</>;
+  if (isPublicPath) {
+    return <>{children}</>;
+  }
+
+  return (
+    <>
+      <SiteNav />
+      {children}
+    </>
+  );
 }
 
