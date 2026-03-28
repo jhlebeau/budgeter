@@ -37,7 +37,7 @@ export function useTransactions(authFetch: AuthFetch) {
       id: string,
       transaction: TransactionInput,
       scope: RecurrenceScope = "this",
-    ) => {
+    ): Promise<boolean> => {
       const response = await authFetch(`/api/transactions/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -49,18 +49,18 @@ export function useTransactions(authFetch: AuthFetch) {
           scope: scope.toUpperCase(),
         }),
       });
-      if (!response || !response.ok) return;
+      return !!(response?.ok);
     },
     [authFetch],
   );
 
   const deleteTransaction = useCallback(
-    async (id: string, scope: RecurrenceScope = "this") => {
+    async (id: string, scope: RecurrenceScope = "this"): Promise<boolean> => {
       const response = await authFetch(`/api/transactions/${id}`, {
         method: "DELETE",
         body: JSON.stringify({ scope: scope.toUpperCase() }),
       });
-      if (!response || !response.ok) return;
+      return !!(response?.ok);
     },
     [authFetch],
   );

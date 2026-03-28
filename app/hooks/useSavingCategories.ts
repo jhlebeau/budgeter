@@ -69,8 +69,8 @@ export function useSavingCategories(authFetch: AuthFetch) {
       id: string,
       limitType: "amount" | "percent",
       limitValue: number,
-    ) => {
-      if (limitValue < 0) return;
+    ): Promise<boolean> => {
+      if (limitValue < 0) return false;
 
       const response = await authFetch(`/api/saving-categories/${id}`, {
         method: "PATCH",
@@ -79,7 +79,7 @@ export function useSavingCategories(authFetch: AuthFetch) {
           limitValue,
         }),
       });
-      if (!response || !response.ok) return;
+      if (!response || !response.ok) return false;
 
       const updated = (await response.json()) as ApiSavingCategory;
       setSavingCategories((current) =>
@@ -87,6 +87,7 @@ export function useSavingCategories(authFetch: AuthFetch) {
           category.id === id ? toCategory(updated) : category,
         ),
       );
+      return true;
     },
     [authFetch],
   );
@@ -114,14 +115,15 @@ export function useSavingCategories(authFetch: AuthFetch) {
   );
 
   const deleteSavingCategory = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<boolean> => {
       const response = await authFetch(`/api/saving-categories/${id}`, {
         method: "DELETE",
       });
-      if (!response || !response.ok) return;
+      if (!response || !response.ok) return false;
       setSavingCategories((current) =>
         current.filter((category) => category.id !== id),
       );
+      return true;
     },
     [authFetch],
   );

@@ -6,6 +6,8 @@ import { useBudget, ApiTransaction, toTransaction, Transaction } from "../budget
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 import { getCurrentMonthKey } from "@/lib/month-utils";
 import { transactionsTheme as theme } from "../ui/dashboard-theme";
+import { useToast } from "../ui/toast";
+import { ConfirmModal } from "../ui/confirm-modal";
 
 const PAGE_SIZE = 25;
 
@@ -177,8 +179,10 @@ export default function TransactionsPage() {
   }));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormData>(emptyForm);
+  const { addToast } = useToast();
   const [submitError, setSubmitError] = useState("");
   const [editError, setEditError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Transaction | null>(null);
   const currentMonthKey = getCurrentMonthKey();
   const parsedFormAmount = parseNonNegativeNumberInput(form.amount);
   const parsedEditAmount = parseNonNegativeNumberInput(editForm.amount);
@@ -245,7 +249,7 @@ export default function TransactionsPage() {
       return;
     }
 
-    await updateTransaction(
+    const ok = await updateTransaction(
       editingId,
       {
         amount: parsedEditAmount,
@@ -257,6 +261,10 @@ export default function TransactionsPage() {
       scope,
     );
 
+    if (!ok) {
+      addToast("Failed to save transaction. Please try again.");
+      return;
+    }
     setEditingId(null);
     setEditForm(emptyForm);
     setEditError("");
@@ -736,12 +744,7 @@ export default function TransactionsPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={async () => {
-                                const shouldDelete = window.confirm("Delete this transaction?");
-                                if (!shouldDelete) return;
-                                await deleteTransaction(transaction.id, "this");
-                                refresh(0);
-                              }}
+                              onClick={() => setPendingDelete(transaction)}
                               className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                             >
                               Delete
@@ -797,6 +800,17 @@ export default function TransactionsPage() {
           </SectionCard>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        message="Delete this transaction?"
+        onConfirm={async () => {
+          const ok = await deleteTransaction(pendingDelete!.id, "this");
+          if (!ok) addToast("Failed to delete transaction. Please try again.");
+          else refresh(0);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Income, useBudget } from "../budget-context";
+import { useToast } from "../ui/toast";
+import { ConfirmModal } from "../ui/confirm-modal";
 import { ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE } from "@/lib/input-validation";
 import {
   NO_STATE_INCOME_TAX_STATES,
@@ -345,7 +347,9 @@ export default function IncomePage() {
     ...emptyForm,
     startMonth: getCurrentMonthKey(),
   }));
+  const { addToast } = useToast();
   const [submitError, setSubmitError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Income | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<IncomeForm>(emptyForm);
   const [editError, setEditError] = useState("");
@@ -471,7 +475,7 @@ export default function IncomePage() {
           : parsedEditTaxRate ?? 0
         : 0;
 
-    await updateIncome(editingId, {
+    const ok = await updateIncome(editingId, {
       source: editForm.source,
       amount: editForm.period === "annual" ? annualEditAmount : monthlyEditAmount,
       period: editForm.period,
@@ -486,6 +490,10 @@ export default function IncomePage() {
       taxRate: editForm.taxType === "pre" ? editEffectiveRate : 0,
     });
 
+    if (!ok) {
+      addToast("Failed to save income source. Please try again.");
+      return;
+    }
     setEditingId(null);
     setEditForm(emptyForm);
     setEditError("");
@@ -1300,13 +1308,7 @@ export default function IncomePage() {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              const shouldDelete = window.confirm(
-                                "Delete this income source?",
-                              );
-                              if (!shouldDelete) return;
-                              await deleteIncome(income.id);
-                            }}
+                            onClick={() => setPendingDelete(income)}
                             className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
                             Delete
@@ -1328,6 +1330,16 @@ export default function IncomePage() {
           </SectionCard>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        message="Delete this income source?"
+        onConfirm={async () => {
+          const ok = await deleteIncome(pendingDelete!.id);
+          if (!ok) addToast("Failed to delete income source. Please try again.");
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { BudgetProvider } from "./budget-context";
 import { AuthGate } from "./auth-gate";
 import { NumberInputWheelGuard } from "./number-input-wheel-guard";
+import { ToastProvider } from "./ui/toast";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,10 +37,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <BudgetProvider>
-          <NumberInputWheelGuard />
-          <AuthGate>{children}</AuthGate>
-        </BudgetProvider>
+        <ToastProvider>
+          <BudgetProvider>
+            <NumberInputWheelGuard />
+            <AuthGate>{children}</AuthGate>
+          </BudgetProvider>
+        </ToastProvider>
       </body>
     </html>
   );

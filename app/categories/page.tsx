@@ -7,6 +7,8 @@ import { getCurrentMonthKey, isMonthInRange } from "@/lib/month-utils";
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 import { ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE } from "@/lib/input-validation";
 import { categoriesTheme as theme } from "../ui/dashboard-theme";
+import { useToast } from "../ui/toast";
+import { ConfirmModal } from "../ui/confirm-modal";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -104,7 +106,9 @@ export default function CategoriesPage() {
   const [newCategory, setNewCategory] = useState("");
   const [newLimitType, setNewLimitType] = useState<"amount" | "percent">("amount");
   const [newLimit, setNewLimit] = useState("");
+  const { addToast } = useToast();
   const [submitError, setSubmitError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<Category | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingLimitType, setEditingLimitType] = useState<"amount" | "percent">("amount");
@@ -182,8 +186,15 @@ export default function CategoriesPage() {
     if (parsedEditingLimit === null) return;
 
     const didRename = await updateCategoryName(editingCategory, editingName);
-    if (!didRename) return;
-    await updateCategoryLimit(editingCategory, editingLimitType, parsedEditingLimit);
+    if (!didRename) {
+      addToast("Failed to save category name. Please try again.");
+      return;
+    }
+    const didUpdate = await updateCategoryLimit(editingCategory, editingLimitType, parsedEditingLimit);
+    if (!didUpdate) {
+      addToast("Failed to save category limit. Please try again.");
+      return;
+    }
     setEditingCategory(null);
     setEditingName("");
     setEditingLimitType("amount");
@@ -581,20 +592,7 @@ export default function CategoriesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              const shouldDelete = window.confirm(
-                                `Delete category "${category.name}"? Existing transactions will be recategorized to Unassigned.`,
-                              );
-                              if (!shouldDelete) return;
-
-                              await deleteCategory(category.id);
-                              if (editingCategory === category.id) {
-                                setEditingCategory(null);
-                                setEditingName("");
-                                setEditingLimitType("amount");
-                                setEditingLimit("");
-                              }
-                            }}
+                            onClick={() => setPendingDelete(category)}
                             className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
                             Delete
@@ -615,6 +613,22 @@ export default function CategoriesPage() {
           </SectionCard>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={pendingDelete !== null}
+        message={`Delete category "${pendingDelete?.name}"? Existing transactions will be recategorized to Unassigned.`}
+        onConfirm={async () => {
+          const ok = await deleteCategory(pendingDelete!.id);
+          if (!ok) addToast("Failed to delete category. Please try again.");
+          else if (editingCategory === pendingDelete!.id) {
+            setEditingCategory(null);
+            setEditingName("");
+            setEditingLimitType("amount");
+            setEditingLimit("");
+          }
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </main>
   );
 }

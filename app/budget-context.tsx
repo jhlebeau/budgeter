@@ -53,9 +53,9 @@ type BudgetContextValue = {
     id: string,
     limitType: "amount" | "percent",
     limitValue: number,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   updateCategoryName: (id: string, nextName: string) => Promise<boolean>;
-  deleteCategory: (id: string) => Promise<void>;
+  deleteCategory: (id: string) => Promise<boolean>;
   addSavingCategory: (
     name: string,
     limitType: "amount" | "percent",
@@ -65,19 +65,19 @@ type BudgetContextValue = {
     id: string,
     limitType: "amount" | "percent",
     limitValue: number,
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   updateSavingCategoryName: (id: string, nextName: string) => Promise<boolean>;
-  deleteSavingCategory: (id: string) => Promise<void>;
+  deleteSavingCategory: (id: string) => Promise<boolean>;
   addTransaction: (transaction: TransactionInput) => Promise<string | null>;
   updateTransaction: (
     id: string,
     transaction: TransactionInput,
     scope?: RecurrenceScope,
-  ) => Promise<void>;
-  deleteTransaction: (id: string, scope?: RecurrenceScope) => Promise<void>;
+  ) => Promise<boolean>;
+  deleteTransaction: (id: string, scope?: RecurrenceScope) => Promise<boolean>;
   addIncome: (income: IncomeInput) => Promise<string | null>;
-  updateIncome: (id: string, income: IncomeInput) => Promise<void>;
-  deleteIncome: (id: string) => Promise<void>;
+  updateIncome: (id: string, income: IncomeInput) => Promise<boolean>;
+  deleteIncome: (id: string) => Promise<boolean>;
   resetData: () => Promise<void>;
 };
 

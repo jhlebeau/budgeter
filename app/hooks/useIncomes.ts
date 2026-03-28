@@ -88,28 +88,30 @@ export function useIncomes(authFetch: AuthFetch) {
   );
 
   const updateIncome = useCallback(
-    async (id: string, income: IncomeInput) => {
+    async (id: string, income: IncomeInput): Promise<boolean> => {
       const response = await authFetch(`/api/income-sources/${id}`, {
         method: "PATCH",
         body: JSON.stringify(buildIncomePayload(income)),
       });
-      if (!response || !response.ok) return;
+      if (!response || !response.ok) return false;
 
       const updated = (await response.json()) as ApiIncome;
       setIncomes((current) =>
         current.map((item) => (item.id === id ? toIncome(updated) : item)),
       );
+      return true;
     },
     [authFetch],
   );
 
   const deleteIncome = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<boolean> => {
       const response = await authFetch(`/api/income-sources/${id}`, {
         method: "DELETE",
       });
-      if (!response || !response.ok) return;
+      if (!response || !response.ok) return false;
       setIncomes((current) => current.filter((item) => item.id !== id));
+      return true;
     },
     [authFetch],
   );

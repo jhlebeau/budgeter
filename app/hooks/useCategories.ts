@@ -73,8 +73,8 @@ export function useCategories(authFetch: AuthFetch) {
       id: string,
       limitType: "amount" | "percent",
       limitValue: number,
-    ) => {
-      if (limitValue < 0) return;
+    ): Promise<boolean> => {
+      if (limitValue < 0) return false;
 
       const response = await authFetch(`/api/spending-categories/${id}`, {
         method: "PATCH",
@@ -83,7 +83,7 @@ export function useCategories(authFetch: AuthFetch) {
           limitValue,
         }),
       });
-      if (!response || !response.ok) return;
+      if (!response || !response.ok) return false;
 
       const updated = (await response.json()) as ApiCategory;
       setCategories((current) =>
@@ -91,6 +91,7 @@ export function useCategories(authFetch: AuthFetch) {
           category.id === id ? toCategory(updated) : category,
         ),
       );
+      return true;
     },
     [authFetch],
   );
@@ -118,12 +119,13 @@ export function useCategories(authFetch: AuthFetch) {
   );
 
   const deleteCategory = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<boolean> => {
       const response = await authFetch(`/api/spending-categories/${id}`, {
         method: "DELETE",
       });
-      if (!response || !response.ok) return;
+      if (!response || !response.ok) return false;
       await refresh();
+      return true;
     },
     [authFetch, refresh],
   );
