@@ -8,76 +8,33 @@ import {
   useEffect,
   useState,
 } from "react";
-import { TaxStateCode } from "@/lib/tax-states";
-import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 import {
-  CATEGORY_NAME_MAX_LENGTH,
-  ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE,
-  NAME_MAX_LENGTH,
-  parseEntryName,
-} from "@/lib/input-validation";
+  ApiCategory,
+  ApiIncome,
+  ApiSavingCategory,
+  AppUser,
+  Category,
+  Income,
+  IncomeInput,
+  RecurrenceScope,
+  TransactionInput,
+} from "@/lib/budget-types";
+import { toCategory, toIncome } from "@/lib/budget-types";
+import { useCategories } from "./hooks/useCategories";
+import { useSavingCategories } from "./hooks/useSavingCategories";
+import { useIncomes } from "./hooks/useIncomes";
+import { useTransactions } from "./hooks/useTransactions";
 
-export type Category = {
-  id: string;
-  name: string;
-  limitType: "amount" | "percent";
-  limitValue: number;
-};
-
-export type AppUser = {
-  id: string;
-  username: string;
-};
-
-export type Transaction = {
-  id: string;
-  amount: number;
-  categoryId: string;
-  categoryName: string;
-  date: string;
-  note: string;
-  recurringSeriesId: string | null;
-  recurrenceFrequency: "daily" | "weekly" | "monthly" | null;
-  recurringSeriesStatus: "active" | "paused" | null;
-};
-
-export type TransactionInput = {
-  amount: number;
-  categoryId: string;
-  date: string;
-  note: string;
-  isRecurring?: boolean;
-  recurrenceFrequency?: "daily" | "weekly" | "monthly";
-};
-
-export type RecurrenceScope = "this" | "future" | "all";
-
-export type Income = {
-  id: string;
-  source: string;
-  amount: number;
-  inputAmount: number;
-  period: "monthly" | "annual";
-  startMonth: string;
-  endMonth: string | null;
-  taxType: "pre" | "post";
-  taxMethod: "manual" | "auto";
-  taxState: TaxStateCode | null;
-  taxRate: number;
-  postTaxAmount: number;
-};
-
-export type IncomeInput = {
-  source: string;
-  amount: number;
-  period: "monthly" | "annual";
-  startMonth: string;
-  endMonth: string | null;
-  taxType: "pre" | "post";
-  taxMethod: "manual" | "auto";
-  taxState: TaxStateCode | null;
-  taxRate: number;
-};
+export type {
+  AppUser,
+  Category,
+  Income,
+  IncomeInput,
+  RecurrenceScope,
+  TransactionInput,
+} from "@/lib/budget-types";
+export type { Transaction, ApiTransaction } from "@/lib/budget-types";
+export { toTransaction } from "@/lib/budget-types";
 
 type BudgetContextValue = {
   currentUser: AppUser | null;
@@ -126,150 +83,11 @@ type BudgetContextValue = {
 
 const BudgetContext = createContext<BudgetContextValue | null>(null);
 
-const getSafeCreateErrorMessage = (
-  operation:
-    | "spending-category"
-    | "saving-category"
-    | "transaction"
-    | "income-source",
-  status?: number,
-) => {
-  if (operation === "spending-category") {
-    if (status === 400) {
-      return "Unable to create spending category. Please review the name and limit.";
-    }
-    return "Unable to create spending category right now.";
-  }
-
-  if (operation === "saving-category") {
-    if (status === 400) {
-      return "Unable to create savings category. Please review the name and limit.";
-    }
-    return "Unable to create savings category right now.";
-  }
-
-  if (operation === "transaction") {
-    if (status === 400) {
-      return "Unable to create transaction. Please review the amount, date, and category.";
-    }
-    return "Unable to create transaction right now.";
-  }
-
-  if (status === 400) {
-    return "Unable to create income source. Please review the name, amount, and tax settings.";
-  }
-  return "Unable to create income source right now.";
-};
-
-type ApiIncome = {
-  id: string;
-  name: string;
-  amount: number;
-  frequency: "MONTHLY" | "ANNUAL";
-  startMonth: string;
-  endMonth: string | null;
-  isPreTax: boolean;
-  taxRate: number | null;
-  taxState: TaxStateCode | null;
-};
-
-type ApiCategory = {
-  id: string;
-  name: string;
-  limitType: "AMOUNT" | "PERCENT";
-  limitValue: number;
-};
-
-type ApiSavingCategory = {
-  id: string;
-  name: string;
-  limitType: "AMOUNT" | "PERCENT";
-  limitValue: number;
-};
-
-export type ApiTransaction = {
-  id: string;
-  amount: number;
-  date: string;
-  description: string | null;
-  categoryId: string;
-  category: { id: string; name: string };
-  recurringSeries: {
-    id: string;
-    frequency: "DAILY" | "WEEKLY" | "MONTHLY";
-    endDate: string | null;
-  } | null;
-};
-
-const toIncome = (income: ApiIncome): Income => {
-  const monthlyAmount =
-    income.frequency === "ANNUAL" ? income.amount / 12 : income.amount;
-  const taxRate = income.isPreTax ? income.taxRate ?? 0 : 0;
-  const postTaxAmount = income.isPreTax
-    ? monthlyAmount * (1 - taxRate / 100)
-    : monthlyAmount;
-
-  return {
-    id: income.id,
-    source: income.name,
-    amount: monthlyAmount,
-    inputAmount: income.amount,
-    period: income.frequency === "ANNUAL" ? "annual" : "monthly",
-    startMonth: income.startMonth,
-    endMonth: income.endMonth,
-    taxType: income.isPreTax ? "pre" : "post",
-    taxMethod: income.isPreTax && income.taxState ? "auto" : "manual",
-    taxState: income.taxState,
-    taxRate,
-    postTaxAmount,
-  };
-};
-
-const toCategory = (category: ApiCategory): Category => ({
-  id: category.id,
-  name: category.name,
-  limitType: category.limitType === "AMOUNT" ? "amount" : "percent",
-  limitValue: category.limitValue,
-});
-
-export const toTransaction = (transaction: ApiTransaction): Transaction => {
-  const recurringEndDate = transaction.recurringSeries?.endDate
-    ? transaction.recurringSeries.endDate.slice(0, 10)
-    : null;
-  const today = new Date().toISOString().slice(0, 10);
-
-  return {
-    id: transaction.id,
-    amount: transaction.amount,
-    categoryId: transaction.categoryId,
-    categoryName: transaction.category.name,
-    date: transaction.date.slice(0, 10),
-    note: transaction.description ?? "",
-    recurringSeriesId: transaction.recurringSeries?.id ?? null,
-    recurrenceFrequency:
-      transaction.recurringSeries?.frequency === "DAILY"
-        ? "daily"
-        : transaction.recurringSeries?.frequency === "WEEKLY"
-          ? "weekly"
-          : transaction.recurringSeries?.frequency === "MONTHLY"
-            ? "monthly"
-            : null,
-    recurringSeriesStatus:
-      transaction.recurringSeries === null
-        ? null
-        : recurringEndDate !== null && recurringEndDate < today
-          ? "paused"
-          : "active",
-  };
-};
-
 export function BudgetProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUserState] = useState<AppUser | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [savingCategories, setSavingCategories] = useState<Category[]>([]);
-  const [incomes, setIncomes] = useState<Income[]>([]);
 
+  // Restore session on mount
   useEffect(() => {
     fetch("/api/auth/session")
       .then((r) => (r.ok ? r.json() : null))
@@ -279,18 +97,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       .catch(() => null)
       .finally(() => setSessionLoading(false));
   }, []);
-
-  const setCurrentUser = (user: AppUser | null) => {
-    setCategories([]);
-    setSavingCategories([]);
-    setIncomes([]);
-    setCurrentUserState(user);
-  };
-
-  const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    setCurrentUser(null);
-  };
 
   const authFetch = useCallback(async (url: string, init?: RequestInit) => {
     if (!currentUser) return null;
@@ -303,383 +109,66 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     });
   }, [currentUser]);
 
+  const categoryHook = useCategories(authFetch);
+  const savingCategoryHook = useSavingCategories(authFetch);
+  const incomeHook = useIncomes(authFetch);
+  const transactionHook = useTransactions(authFetch);
+
+  // Load all data when user signs in
   useEffect(() => {
     if (!currentUser) return;
 
     let isActive = true;
 
     const load = async () => {
-      const [categoriesResponse, savingCategoriesResponse, incomesResponse] =
-        await Promise.all([
-          authFetch("/api/spending-categories", { cache: "no-store" }),
-          authFetch("/api/saving-categories", { cache: "no-store" }),
-          authFetch("/api/income-sources", { cache: "no-store" }),
-        ]);
+      const [catRes, savingCatRes, incomeRes] = await Promise.all([
+        authFetch("/api/spending-categories", { cache: "no-store" }),
+        authFetch("/api/saving-categories", { cache: "no-store" }),
+        authFetch("/api/income-sources", { cache: "no-store" }),
+      ]);
 
       if (
-        !categoriesResponse ||
-        !savingCategoriesResponse ||
-        !incomesResponse ||
-        !isActive ||
-        !categoriesResponse.ok ||
-        !savingCategoriesResponse.ok ||
-        !incomesResponse.ok
-      ) {
-        return;
-      }
+        !catRes?.ok ||
+        !savingCatRes?.ok ||
+        !incomeRes?.ok ||
+        !isActive
+      ) return;
 
-      const [categoriesData, savingCategoriesData, incomesData] = await Promise.all([
-        categoriesResponse.json() as Promise<ApiCategory[]>,
-        savingCategoriesResponse.json() as Promise<ApiSavingCategory[]>,
-        incomesResponse.json() as Promise<ApiIncome[]>,
+      const [catData, savingCatData, incomeData] = await Promise.all([
+        catRes.json() as Promise<ApiCategory[]>,
+        savingCatRes.json() as Promise<ApiSavingCategory[]>,
+        incomeRes.json() as Promise<ApiIncome[]>,
       ]);
 
       if (!isActive) return;
-      setCategories(categoriesData.map(toCategory));
-      setSavingCategories(savingCategoriesData.map(toCategory));
-      setIncomes(incomesData.map(toIncome));
+      categoryHook.setCategories(catData.map(toCategory));
+      savingCategoryHook.setSavingCategories(savingCatData.map(toCategory));
+      incomeHook.setIncomes(incomeData.map(toIncome));
     };
 
     void load();
-    return () => {
-      isActive = false;
-    };
-  }, [authFetch, currentUser]);
+    return () => { isActive = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
-  const refreshCategories = async () => {
-    const response = await authFetch("/api/spending-categories", { cache: "no-store" });
-    if (!response || !response.ok) return;
-    const categoriesData = (await response.json()) as ApiCategory[];
-    setCategories(categoriesData.map(toCategory));
+  const setCurrentUser = (user: AppUser | null) => {
+    categoryHook.clear();
+    savingCategoryHook.clear();
+    incomeHook.clear();
+    setCurrentUserState(user);
   };
 
-  const addCategory = async (
-    name: string,
-    limitType: "amount" | "percent",
-    limitValue: number,
-  ) => {
-    const nextName = parseEntryName(name, CATEGORY_NAME_MAX_LENGTH);
-    if (!nextName || limitValue < 0) {
-      return `Category names can only use letters, numbers, spaces, underscores, and dashes, and the limit must be non-negative.`;
-    }
-    if (nextName.toLowerCase() === UNASSIGNED_CATEGORY_NAME.toLowerCase()) {
-      return `"${UNASSIGNED_CATEGORY_NAME}" is reserved and cannot be used.`;
-    }
-
-    const exists = categories.some(
-      (category) => category.name.toLowerCase() === nextName.toLowerCase(),
-    );
-    if (exists) {
-      return `A spending category named "${nextName}" already exists.`;
-    }
-
-    const response = await authFetch("/api/spending-categories", {
-      method: "POST",
-      body: JSON.stringify({
-        name: nextName,
-        limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
-        limitValue,
-      }),
-    });
-    if (!response) return getSafeCreateErrorMessage("spending-category");
-    if (!response.ok) {
-      return getSafeCreateErrorMessage("spending-category", response.status);
-    }
-
-    const created = (await response.json()) as ApiCategory;
-    setCategories((current) => [toCategory(created), ...current]);
-    return null;
-  };
-
-  const updateCategoryLimit = async (
-    id: string,
-    limitType: "amount" | "percent",
-    limitValue: number,
-  ) => {
-    if (limitValue < 0) return;
-
-    const response = await authFetch(`/api/spending-categories/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
-        limitValue,
-      }),
-    });
-    if (!response || !response.ok) return;
-
-    const updated = (await response.json()) as ApiCategory;
-    setCategories((current) =>
-      current.map((category) => (category.id === id ? toCategory(updated) : category)),
-    );
-  };
-
-  const updateCategoryName = async (id: string, nextName: string) => {
-    const trimmedName = parseEntryName(nextName, CATEGORY_NAME_MAX_LENGTH);
-    if (!trimmedName) return false;
-
-    const response = await authFetch(`/api/spending-categories/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: trimmedName }),
-    });
-    if (!response || !response.ok) return false;
-
-    const updated = (await response.json()) as ApiCategory;
-    setCategories((current) =>
-      current.map((category) => (category.id === id ? toCategory(updated) : category)),
-    );
-    return true;
-  };
-
-  const deleteCategory = async (id: string) => {
-    const response = await authFetch(`/api/spending-categories/${id}`, {
-      method: "DELETE",
-    });
-    if (!response || !response.ok) return;
-
-    await refreshCategories();
-  };
-
-  const addSavingCategory = async (
-    name: string,
-    limitType: "amount" | "percent",
-    limitValue: number,
-  ) => {
-    const nextName = parseEntryName(name, CATEGORY_NAME_MAX_LENGTH);
-    if (!nextName || limitValue < 0) {
-      return `Savings category names can only use letters, numbers, spaces, underscores, and dashes, and the limit must be non-negative.`;
-    }
-
-    const exists = savingCategories.some(
-      (category) => category.name.toLowerCase() === nextName.toLowerCase(),
-    );
-    if (exists) {
-      return `A savings category named "${nextName}" already exists.`;
-    }
-
-    const response = await authFetch("/api/saving-categories", {
-      method: "POST",
-      body: JSON.stringify({
-        name: nextName,
-        limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
-        limitValue,
-      }),
-    });
-    if (!response) return getSafeCreateErrorMessage("saving-category");
-    if (!response.ok) {
-      return getSafeCreateErrorMessage("saving-category", response.status);
-    }
-
-    const created = (await response.json()) as ApiSavingCategory;
-    setSavingCategories((current) => [toCategory(created), ...current]);
-    return null;
-  };
-
-  const updateSavingCategoryLimit = async (
-    id: string,
-    limitType: "amount" | "percent",
-    limitValue: number,
-  ) => {
-    if (limitValue < 0) return;
-
-    const response = await authFetch(`/api/saving-categories/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        limitType: limitType === "amount" ? "AMOUNT" : "PERCENT",
-        limitValue,
-      }),
-    });
-    if (!response || !response.ok) return;
-
-    const updated = (await response.json()) as ApiSavingCategory;
-    setSavingCategories((current) =>
-      current.map((category) => (category.id === id ? toCategory(updated) : category)),
-    );
-  };
-
-  const updateSavingCategoryName = async (id: string, nextName: string) => {
-    const trimmedName = parseEntryName(nextName, CATEGORY_NAME_MAX_LENGTH);
-    if (!trimmedName) return false;
-
-    const response = await authFetch(`/api/saving-categories/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: trimmedName }),
-    });
-    if (!response || !response.ok) return false;
-
-    const updated = (await response.json()) as ApiSavingCategory;
-    setSavingCategories((current) =>
-      current.map((category) => (category.id === id ? toCategory(updated) : category)),
-    );
-    return true;
-  };
-
-  const deleteSavingCategory = async (id: string) => {
-    const response = await authFetch(`/api/saving-categories/${id}`, {
-      method: "DELETE",
-    });
-    if (!response || !response.ok) return;
-
-    setSavingCategories((current) =>
-      current.filter((category) => category.id !== id),
-    );
-  };
-
-  const addTransaction = async (transaction: TransactionInput) => {
-    const response = await authFetch("/api/transactions", {
-      method: "POST",
-      body: JSON.stringify({
-        amount: transaction.amount,
-        categoryId: transaction.categoryId,
-        date: transaction.date,
-        description: transaction.note || null,
-        isRecurring: transaction.isRecurring === true,
-        recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
-      }),
-    });
-    if (!response) return getSafeCreateErrorMessage("transaction");
-    if (!response.ok) {
-      return getSafeCreateErrorMessage("transaction", response.status);
-    }
-    return null;
-  };
-
-  const updateTransaction = async (
-    id: string,
-    transaction: TransactionInput,
-    scope: RecurrenceScope = "this",
-  ) => {
-    const response = await authFetch(`/api/transactions/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        amount: transaction.amount,
-        categoryId: transaction.categoryId,
-        date: transaction.date,
-        description: transaction.note || null,
-        recurrenceFrequency: transaction.recurrenceFrequency?.toUpperCase(),
-        scope: scope.toUpperCase(),
-      }),
-    });
-    if (!response || !response.ok) return;
-  };
-
-  const deleteTransaction = async (id: string, scope: RecurrenceScope = "this") => {
-    const response = await authFetch(`/api/transactions/${id}`, {
-      method: "DELETE",
-      body: JSON.stringify({
-        scope: scope.toUpperCase(),
-      }),
-    });
-    if (!response || !response.ok) return;
-  };
-
-  const addIncome = async (income: IncomeInput) => {
-    const nextName = parseEntryName(income.source, NAME_MAX_LENGTH);
-    if (!nextName) {
-      return `Enter a valid income source name. ${ENTRY_NAME_ALLOWED_CHARACTERS_MESSAGE}`;
-    }
-
-    const exists = incomes.some(
-      (existingIncome) => existingIncome.source.toLowerCase() === nextName.toLowerCase(),
-    );
-    if (exists) {
-      return `An income source named "${nextName}" already exists.`;
-    }
-
-    const isPreTax = income.taxType === "pre";
-    const incomePayload: {
-      name: string;
-      amount: number;
-      frequency: "MONTHLY" | "ANNUAL";
-      startMonth: string;
-      endMonth: string | null;
-      isPreTax: boolean;
-      taxRate?: number;
-      taxState?: TaxStateCode;
-    } = {
-      name: nextName,
-      amount: income.amount,
-      frequency: income.period === "annual" ? "ANNUAL" : "MONTHLY",
-      startMonth: income.startMonth,
-      endMonth: income.endMonth,
-      isPreTax,
-    };
-    if (isPreTax) {
-      incomePayload.taxRate = income.taxRate;
-      if (income.taxMethod === "auto" && income.taxState) {
-        incomePayload.taxState = income.taxState;
-      }
-    }
-
-    const response = await authFetch("/api/income-sources", {
-      method: "POST",
-      body: JSON.stringify(incomePayload),
-    });
-    if (!response) return getSafeCreateErrorMessage("income-source");
-    if (!response.ok) {
-      return getSafeCreateErrorMessage("income-source", response.status);
-    }
-
-    const created = (await response.json()) as ApiIncome;
-    setIncomes((current) => [toIncome(created), ...current]);
-    return null;
-  };
-
-  const updateIncome = async (id: string, income: IncomeInput) => {
-    const isPreTax = income.taxType === "pre";
-    const incomePayload: {
-      name: string;
-      amount: number;
-      frequency: "MONTHLY" | "ANNUAL";
-      startMonth: string;
-      endMonth: string | null;
-      isPreTax: boolean;
-      taxRate?: number;
-      taxState?: TaxStateCode;
-    } = {
-      name: income.source,
-      amount: income.amount,
-      frequency: income.period === "annual" ? "ANNUAL" : "MONTHLY",
-      startMonth: income.startMonth,
-      endMonth: income.endMonth,
-      isPreTax,
-    };
-    if (isPreTax) {
-      incomePayload.taxRate = income.taxRate;
-      if (income.taxMethod === "auto" && income.taxState) {
-        incomePayload.taxState = income.taxState;
-      }
-    }
-
-    const response = await authFetch(`/api/income-sources/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(incomePayload),
-    });
-    if (!response || !response.ok) return;
-
-    const updated = (await response.json()) as ApiIncome;
-    setIncomes((current) =>
-      current.map((item) => (item.id === id ? toIncome(updated) : item)),
-    );
-  };
-
-  const deleteIncome = async (id: string) => {
-    const response = await authFetch(`/api/income-sources/${id}`, {
-      method: "DELETE",
-    });
-    if (!response || !response.ok) return;
-
-    setIncomes((current) => current.filter((item) => item.id !== id));
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setCurrentUser(null);
   };
 
   const resetData = async () => {
-    const response = await authFetch("/api/reset-data", {
-      method: "DELETE",
-    });
+    const response = await authFetch("/api/reset-data", { method: "DELETE" });
     if (!response || !response.ok) return;
-
-    setCategories([]);
-    setSavingCategories([]);
-    setIncomes([]);
+    categoryHook.clear();
+    savingCategoryHook.clear();
+    incomeHook.clear();
   };
 
   return (
@@ -689,23 +178,23 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         sessionLoading,
         setCurrentUser,
         logout,
-        categories,
-        savingCategories,
-        incomes,
-        addCategory,
-        updateCategoryLimit,
-        updateCategoryName,
-        deleteCategory,
-        addSavingCategory,
-        updateSavingCategoryLimit,
-        updateSavingCategoryName,
-        deleteSavingCategory,
-        addTransaction,
-        updateTransaction,
-        deleteTransaction,
-        addIncome,
-        updateIncome,
-        deleteIncome,
+        categories: categoryHook.categories,
+        savingCategories: savingCategoryHook.savingCategories,
+        incomes: incomeHook.incomes,
+        addCategory: categoryHook.addCategory,
+        updateCategoryLimit: categoryHook.updateCategoryLimit,
+        updateCategoryName: categoryHook.updateCategoryName,
+        deleteCategory: categoryHook.deleteCategory,
+        addSavingCategory: savingCategoryHook.addSavingCategory,
+        updateSavingCategoryLimit: savingCategoryHook.updateSavingCategoryLimit,
+        updateSavingCategoryName: savingCategoryHook.updateSavingCategoryName,
+        deleteSavingCategory: savingCategoryHook.deleteSavingCategory,
+        addTransaction: transactionHook.addTransaction,
+        updateTransaction: transactionHook.updateTransaction,
+        deleteTransaction: transactionHook.deleteTransaction,
+        addIncome: incomeHook.addIncome,
+        updateIncome: incomeHook.updateIncome,
+        deleteIncome: incomeHook.deleteIncome,
         resetData,
       }}
     >
