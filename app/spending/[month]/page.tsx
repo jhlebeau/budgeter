@@ -80,15 +80,21 @@ export default function SpendingMonthPage() {
   const { month } = useParams<{ month: string }>();
   const { categories, savingCategories, incomes } = useBudget();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!/^\d{4}-\d{2}$/.test(month)) return;
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     fetch(`/api/transactions?month=${encodeURIComponent(month)}`)
       .then((r) => (r.ok ? (r.json() as Promise<{ transactions: ApiTransaction[] }>) : null))
       .then((data) => {
         if (data) setTransactions(data.transactions.map(toTransaction));
       })
-      .catch(() => null);
+      .catch(() => null)
+      .finally(() => setLoading(false));
   }, [month]);
 
   const isValidMonth =
@@ -270,7 +276,13 @@ export default function SpendingMonthPage() {
           </div>
         </header>
 
-        {isValidMonth ? (
+        {isValidMonth && loading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="h-[100px] animate-pulse rounded-[1.75rem] bg-slate-800/50" />
+            ))}
+          </div>
+        ) : isValidMonth ? (
           <>
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <MetricCard

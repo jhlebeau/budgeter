@@ -13,7 +13,7 @@ const actions = [
 
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, setCurrentUser } = useBudget();
+  const { currentUser, logout } = useBudget();
 
   useEffect(() => {
     if (!currentUser) {
@@ -51,7 +51,7 @@ export default function HomePage() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => setCurrentUser(null)}
+                  onClick={() => void logout()}
                   className="rounded-full border border-white/15 px-4 py-2 text-slate-100 transition hover:bg-white/10"
                 >
                   Log Out

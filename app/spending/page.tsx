@@ -18,6 +18,7 @@ const formatMonthLabel = (monthKey: string) => {
 
 export default function SpendingPage() {
   const [months, setMonths] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const currentMonthKey = getCurrentMonthKey();
@@ -27,7 +28,8 @@ export default function SpendingPage() {
         const monthSet = new Set<string>([currentMonthKey, ...data]);
         setMonths([...monthSet].sort().reverse());
       })
-      .catch(() => setMonths([currentMonthKey]));
+      .catch(() => setMonths([currentMonthKey]))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -51,15 +53,19 @@ export default function SpendingPage() {
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {months.map((monthKey) => (
-            <Link
-              key={monthKey}
-              href={`/spending/${monthKey}`}
-              className="rounded-[1.75rem] border border-rose-400/25 bg-slate-900/78 p-6 text-sm font-medium text-slate-100 shadow-[0_18px_60px_-40px_rgba(190,24,93,0.45)] transition hover:-translate-y-1 hover:bg-slate-900"
-            >
-              {formatMonthLabel(monthKey)}
-            </Link>
-          ))}
+          {loading
+            ? Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="h-[72px] animate-pulse rounded-[1.75rem] bg-slate-800/50" />
+              ))
+            : months.map((monthKey) => (
+                <Link
+                  key={monthKey}
+                  href={`/spending/${monthKey}`}
+                  className="rounded-[1.75rem] border border-rose-400/25 bg-slate-900/78 p-6 text-sm font-medium text-slate-100 shadow-[0_18px_60px_-40px_rgba(190,24,93,0.45)] transition hover:-translate-y-1 hover:bg-slate-900"
+                >
+                  {formatMonthLabel(monthKey)}
+                </Link>
+              ))}
         </section>
       </div>
     </main>

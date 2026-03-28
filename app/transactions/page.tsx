@@ -139,9 +139,11 @@ export default function TransactionsPage() {
   const [monthCount, setMonthCount] = useState(0);
   const [activeRecurringSeriesCount, setActiveRecurringSeriesCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const fetchTransactions = useCallback(
     (targetPage: number) => {
+      setLoading(true);
       fetch(`/api/transactions?page=${targetPage}&pageSize=${PAGE_SIZE}`)
         .then((r) => (r.ok ? (r.json() as Promise<PagedResponse>) : null))
         .then((data) => {
@@ -153,7 +155,8 @@ export default function TransactionsPage() {
           setMonthCount(data.monthCount);
           setActiveRecurringSeriesCount(data.activeRecurringSeriesCount);
         })
-        .catch(() => null);
+        .catch(() => null)
+        .finally(() => setLoading(false));
     },
     [],
   );
@@ -496,7 +499,12 @@ export default function TransactionsPage() {
             </div>
 
             <ul className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-10 xl:pr-2">
-              {transactions.map((transaction) => (
+              {loading ? (
+                Array.from({ length: 3 }, (_, i) => (
+                  <li key={i} className="h-[88px] animate-pulse rounded-3xl bg-slate-800/50" />
+                ))
+              ) : null}
+              {!loading && transactions.map((transaction) => (
                 <li
                   key={transaction.id}
                   className="rounded-3xl border border-violet-400/25 bg-slate-900/72 p-5"
@@ -865,7 +873,7 @@ export default function TransactionsPage() {
                   )}
                 </li>
               ))}
-              {total === 0 ? (
+              {!loading && total === 0 ? (
                 <li className="rounded-3xl border border-dashed border-violet-400/25 bg-slate-900/60 p-8 text-center text-sm text-slate-300">
                   No transactions yet. Add your first transaction to start building a
                   cleaner spending history.
