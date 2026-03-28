@@ -20,6 +20,17 @@ const parseDate = (value: unknown) => {
 };
 
 async function generateMissingRecurringTransactions(userId: string, now: Date) {
+  const todayKey = dateKey(now);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { recurringGeneratedDate: true },
+  });
+
+  if (user?.recurringGeneratedDate && dateKey(user.recurringGeneratedDate) === todayKey) {
+    return;
+  }
+
   const recurringSeries = await prisma.recurringTransaction.findMany({
     where: { userId },
     include: {
@@ -91,6 +102,11 @@ async function generateMissingRecurringTransactions(userId: string, now: Date) {
       });
     }
   }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { recurringGeneratedDate: now },
+  });
 }
 
 export async function GET(request: Request) {

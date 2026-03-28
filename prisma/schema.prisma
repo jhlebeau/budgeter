@@ -108,17 +108,18 @@ model RecurringTransactionSkipDate {
 }
 
 model User {
-  id                   String   @id @default(uuid())
-  username             String
-  usernameKey          String   @unique
-  passwordHash         String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  incomeSources        IncomeSource[]
-  spendingCategories   SpendingCategory[]
-  savingCategories     SavingCategory[]
-  transactions         Transaction[]
-  recurringTransactions RecurringTransaction[]
+  id                      String    @id @default(uuid())
+  username                String
+  usernameKey             String    @unique
+  passwordHash            String?
+  recurringGeneratedDate  DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  incomeSources           IncomeSource[]
+  spendingCategories      SpendingCategory[]
+  savingCategories        SavingCategory[]
+  transactions            Transaction[]
+  recurringTransactions   RecurringTransaction[]
 }
 
 enum Frequency {

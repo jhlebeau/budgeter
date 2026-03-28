@@ -9,6 +9,7 @@ import {
   parseRequiredText,
   USERNAME_MAX_LENGTH,
 } from "@/lib/input-validation";
+import { checkLoginRateLimit, resetLoginRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +26,10 @@ export async function POST(request: Request) {
     }
 
     const usernameKey = normalizeUsername(parsedUsername);
+
+    const rateLimit = await checkLoginRateLimit(request, usernameKey);
+    if (rateLimit.limited) return rateLimit.response;
+
     const user = await prisma.user.findUnique({
       where: { usernameKey },
       select: { id: true, username: true, passwordHash: true },
@@ -38,6 +43,8 @@ export async function POST(request: Request) {
     if (!passwordValid) {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }
+
+    await resetLoginRateLimit(request, usernameKey);
 
     const token = await signSession(user.id, user.username);
     const cookieStore = await cookies();
