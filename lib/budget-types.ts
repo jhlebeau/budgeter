@@ -103,8 +103,49 @@ export type ApiTransaction = {
     id: string;
     frequency: "DAILY" | "WEEKLY" | "MONTHLY";
     endDate: string | null;
+    isPaused: boolean;
   } | null;
 };
+
+export type ApiRecurringSeries = {
+  id: string;
+  amount: number;
+  description: string | null;
+  frequency: "DAILY" | "WEEKLY" | "MONTHLY";
+  startDate: string;
+  endDate: string | null;
+  isPaused: boolean;
+  categoryId: string;
+  category: { id: string; name: string };
+  _count: { transactions: number };
+};
+
+export type RecurringSeries = {
+  id: string;
+  amount: number;
+  description: string | null;
+  frequency: "daily" | "weekly" | "monthly";
+  startDate: string;
+  endDate: string | null;
+  isPaused: boolean;
+  categoryId: string;
+  categoryName: string;
+  transactionCount: number;
+};
+
+export const toRecurringSeries = (s: ApiRecurringSeries): RecurringSeries => ({
+  id: s.id,
+  amount: s.amount,
+  description: s.description,
+  frequency:
+    s.frequency === "DAILY" ? "daily" : s.frequency === "WEEKLY" ? "weekly" : "monthly",
+  startDate: s.startDate.slice(0, 10),
+  endDate: s.endDate ? s.endDate.slice(0, 10) : null,
+  isPaused: s.isPaused,
+  categoryId: s.categoryId,
+  categoryName: s.category.name,
+  transactionCount: s._count.transactions,
+});
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -140,11 +181,6 @@ export const toCategory = (category: ApiCategory | ApiSavingCategory): Category 
 });
 
 export const toTransaction = (transaction: ApiTransaction): Transaction => {
-  const recurringEndDate = transaction.recurringSeries?.endDate
-    ? transaction.recurringSeries.endDate.slice(0, 10)
-    : null;
-  const today = new Date().toISOString().slice(0, 10);
-
   return {
     id: transaction.id,
     amount: transaction.amount,
@@ -164,7 +200,7 @@ export const toTransaction = (transaction: ApiTransaction): Transaction => {
     recurringSeriesStatus:
       transaction.recurringSeries === null
         ? null
-        : recurringEndDate !== null && recurringEndDate < today
+        : transaction.recurringSeries.isPaused
           ? "paused"
           : "active",
   };

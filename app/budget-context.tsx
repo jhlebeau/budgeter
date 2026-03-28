@@ -33,8 +33,8 @@ export type {
   RecurrenceScope,
   TransactionInput,
 } from "@/lib/budget-types";
-export type { Transaction, ApiTransaction } from "@/lib/budget-types";
-export { toTransaction } from "@/lib/budget-types";
+export type { Transaction, ApiTransaction, ApiRecurringSeries, RecurringSeries } from "@/lib/budget-types";
+export { toTransaction, toRecurringSeries } from "@/lib/budget-types";
 
 type BudgetContextValue = {
   currentUser: AppUser | null;

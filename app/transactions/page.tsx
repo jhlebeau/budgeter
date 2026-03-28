@@ -179,8 +179,6 @@ export default function TransactionsPage() {
   const [editForm, setEditForm] = useState<FormData>(emptyForm);
   const [submitError, setSubmitError] = useState("");
   const [editError, setEditError] = useState("");
-  const [deleteScopeForId, setDeleteScopeForId] = useState<string | null>(null);
-  const [editScopeForId, setEditScopeForId] = useState<string | null>(null);
   const currentMonthKey = getCurrentMonthKey();
   const parsedFormAmount = parseNonNegativeNumberInput(form.amount);
   const parsedEditAmount = parseNonNegativeNumberInput(editForm.amount);
@@ -229,14 +227,13 @@ export default function TransactionsPage() {
     if (!transaction) return;
 
     setEditingId(id);
-    setEditScopeForId(null);
     setEditForm({
       amount: String(transaction.amount),
       categoryId: transaction.categoryId,
       date: transaction.date,
       note: transaction.note,
-      isRecurring: transaction.recurringSeriesId !== null,
-      recurrenceFrequency: transaction.recurrenceFrequency ?? "monthly",
+      isRecurring: false,
+      recurrenceFrequency: "monthly",
     });
   };
 
@@ -261,7 +258,6 @@ export default function TransactionsPage() {
     );
 
     setEditingId(null);
-    setEditScopeForId(null);
     setEditForm(emptyForm);
     setEditError("");
     refresh(page);
@@ -306,13 +302,18 @@ export default function TransactionsPage() {
                   </p>
                 </div>
               </div>
-              <a
-                href="/api/transactions/export"
-                download="transactions.csv"
-                className={subtleButtonClass}
-              >
-                Export CSV
-              </a>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/recurring" className={subtleButtonClass}>
+                  Manage recurring
+                </Link>
+                <a
+                  href="/api/transactions/export"
+                  download="transactions.csv"
+                  className={subtleButtonClass}
+                >
+                  Export CSV
+                </a>
+              </div>
             </div>
           </div>
         </header>
@@ -530,7 +531,7 @@ export default function TransactionsPage() {
                           </h3>
                         </div>
                         <span className="rounded-full border border-violet-400/25 bg-slate-950/80 px-3 py-1 text-xs font-medium text-violet-200">
-                          {transaction.recurringSeriesId ? "Recurring" : "One-time"}
+                          One-time
                         </span>
                       </div>
 
@@ -613,96 +614,25 @@ export default function TransactionsPage() {
                           />
                         </div>
 
-                        {transaction.recurringSeriesId ? (
-                          <div className="md:col-span-2">
-                            <FieldLabel label="Frequency" />
-                            <select
-                              value={editForm.recurrenceFrequency}
-                              onChange={(event) =>
-                                setEditForm((current) => ({
-                                  ...current,
-                                  recurrenceFrequency: event.target.value as
-                                    | "daily"
-                                    | "weekly"
-                                    | "monthly",
-                                }))
-                              }
-                              className={selectClass}
-                            >
-                              <option value="daily">Daily</option>
-                              <option value="weekly">Weekly</option>
-                              <option value="monthly">Monthly</option>
-                            </select>
-                          </div>
-                        ) : null}
                       </div>
 
                       <div className="flex flex-wrap gap-3">
                         {editError ? (
                           <p className="w-full text-sm font-medium text-red-600">{editError}</p>
                         ) : null}
-                        {transaction.recurringSeriesId ? (
-                          editScopeForId === transaction.id ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => saveEdit("this")}
-                                className={primaryButtonClass}
-                                disabled={!canSaveTransactionEdit}
-                              >
-                                Save this transaction
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => saveEdit("future")}
-                                className={primaryButtonClass}
-                                disabled={!canSaveTransactionEdit}
-                              >
-                                Save this and following
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => saveEdit("all")}
-                                className={primaryButtonClass}
-                                disabled={!canSaveTransactionEdit}
-                              >
-                                Save all transactions
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditScopeForId(null)}
-                                className={subtleButtonClass}
-                              >
-                                Cancel scope
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setEditScopeForId(transaction.id)}
-                              className={primaryButtonClass}
-                              disabled={!canSaveTransactionEdit}
-                            >
-                              Save
-                            </button>
-                          )
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => saveEdit("this")}
-                            className={primaryButtonClass}
-                            disabled={!canSaveTransactionEdit}
-                          >
-                            Save
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => saveEdit("this")}
+                          className={primaryButtonClass}
+                          disabled={!canSaveTransactionEdit}
+                        >
+                          Save
+                        </button>
                         <button
                           type="button"
                           onClick={() => {
                             setEditingId(null);
-                            setEditScopeForId(null);
                             setEditForm(emptyForm);
-                            setDeleteScopeForId(null);
                             setEditError("");
                           }}
                           className={subtleButtonClass}
@@ -791,91 +721,32 @@ export default function TransactionsPage() {
                       ) : null}
 
                       <div className="flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={() => startEditing(transaction.id)}
-                          className={subtleButtonClass}
-                        >
-                          Edit
-                        </button>
                         {transaction.recurringSeriesId ? (
-                          deleteScopeForId === transaction.id ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  const shouldDelete = window.confirm(
-                                    "Delete this transaction?",
-                                  );
-                                  if (!shouldDelete) return;
-                                  await deleteTransaction(transaction.id, "this");
-                                  setDeleteScopeForId(null);
-                                  refresh(0);
-                                }}
-                                className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
-                              >
-                                Delete this
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  const shouldDelete = window.confirm(
-                                    "Delete this and all following transactions?",
-                                  );
-                                  if (!shouldDelete) return;
-                                  await deleteTransaction(transaction.id, "future");
-                                  setDeleteScopeForId(null);
-                                  refresh(0);
-                                }}
-                                className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
-                              >
-                                Delete this and following
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  const shouldDelete = window.confirm(
-                                    "Delete all transactions in this recurring series?",
-                                  );
-                                  if (!shouldDelete) return;
-                                  await deleteTransaction(transaction.id, "all");
-                                  setDeleteScopeForId(null);
-                                  refresh(0);
-                                }}
-                                className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
-                              >
-                                Delete all
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleteScopeForId(null)}
-                                className={subtleButtonClass}
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
+                          <Link href="/recurring" className={subtleButtonClass}>
+                            Manage
+                          </Link>
+                        ) : (
+                          <>
                             <button
                               type="button"
-                              onClick={() => setDeleteScopeForId(transaction.id)}
+                              onClick={() => startEditing(transaction.id)}
+                              className={subtleButtonClass}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const shouldDelete = window.confirm("Delete this transaction?");
+                                if (!shouldDelete) return;
+                                await deleteTransaction(transaction.id, "this");
+                                refresh(0);
+                              }}
                               className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                             >
                               Delete
                             </button>
-                          )
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const shouldDelete = window.confirm("Delete this transaction?");
-                              if (!shouldDelete) return;
-                              await deleteTransaction(transaction.id, "this");
-                              refresh(0);
-                            }}
-                            className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
-                          >
-                            Delete
-                          </button>
+                          </>
                         )}
                       </div>
                     </div>

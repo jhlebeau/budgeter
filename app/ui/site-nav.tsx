@@ -15,6 +15,7 @@ const setupDropdownLinks = [
 const navLinks = [
   { href: "/home", label: "Home", match: ["/home"] },
   { href: "/transactions", label: "Transactions", match: ["/transactions"] },
+  { href: "/recurring", label: "Recurring", match: ["/recurring"] },
   { href: "/spending", label: "Spending", match: ["/spending"] },
   { href: "/settings", label: "Settings", match: ["/settings"] },
 ];

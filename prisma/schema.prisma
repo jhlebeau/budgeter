@@ -81,6 +81,7 @@ model RecurringTransaction {
   frequency   RecurrenceFrequency
   startDate   DateTime
   endDate     DateTime?
+  isPaused    Boolean  @default(false)
   amount      Float
   description String?
   userId      String

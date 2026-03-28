@@ -223,6 +223,7 @@ export async function PATCH(
           userId,
           frequency: nextFrequency,
           endDate: null,
+          isPaused: false,
           ...(parsedScope === "ALL" ? { startDate: nextDate } : {}),
         },
       });

@@ -32,7 +32,7 @@ async function generateMissingRecurringTransactions(userId: string, now: Date) {
   }
 
   const recurringSeries = await prisma.recurringTransaction.findMany({
-    where: { userId },
+    where: { userId, isPaused: false },
     include: {
       transactions: {
         select: { date: true },
