@@ -1,4 +1,5 @@
 # Memory Index
 
-- [Project Overview](project_overview.md) — Budgeter web app: Next.js 16, React 19, Prisma + PostgreSQL (Neon), Tailwind CSS 4
-- [Auth Architecture](project_auth.md) — Password + JWT session cookie auth implemented; x-user-id header replaced
+- [Project Overview](project_overview.md) — Tech stack, key dirs, mutation and UX feedback conventions
+- [Auth Architecture](project_auth.md) — Password + JWT session cookie auth; requireUserId usage
+- [UX Feedback Patterns](project_ux_patterns.md) — Toast system and confirm modal conventions (added March 2026)

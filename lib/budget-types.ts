@@ -200,7 +200,9 @@ export const toTransaction = (transaction: ApiTransaction): Transaction => {
     recurringSeriesStatus:
       transaction.recurringSeries === null
         ? null
-        : transaction.recurringSeries.isPaused
+        : transaction.recurringSeries.isPaused ||
+            (transaction.recurringSeries.endDate !== null &&
+              new Date(transaction.recurringSeries.endDate) < new Date())
           ? "paused"
           : "active",
   };
