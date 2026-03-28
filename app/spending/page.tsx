@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { useBudget } from "../budget-context";
+import { useEffect, useState } from "react";
 import { getCurrentMonthKey } from "@/lib/month-utils";
 
 const monthFormatter = new Intl.DateTimeFormat("en-US", {
@@ -18,22 +17,18 @@ const formatMonthLabel = (monthKey: string) => {
 };
 
 export default function SpendingPage() {
-  const { transactions } = useBudget();
-  const currentMonthKey = getCurrentMonthKey();
+  const [months, setMonths] = useState<string[]>([]);
 
-  const months = useMemo(() => {
-    const monthKeys = new Set<string>([currentMonthKey]);
-    for (const transaction of transactions) {
-      const [yearText, monthText] = transaction.date.split("-");
-      const transactionYear = Number(yearText);
-      const transactionMonth = Number(monthText);
-      if (!Number.isInteger(transactionYear) || !Number.isInteger(transactionMonth) || transactionMonth < 1 || transactionMonth > 12) {
-        continue;
-      }
-      monthKeys.add(`${transactionYear}-${String(transactionMonth).padStart(2, "0")}`);
-    }
-    return [...monthKeys].sort().reverse();
-  }, [currentMonthKey, transactions]);
+  useEffect(() => {
+    const currentMonthKey = getCurrentMonthKey();
+    fetch("/api/transactions/months")
+      .then((r) => (r.ok ? (r.json() as Promise<string[]>) : []))
+      .then((data) => {
+        const monthSet = new Set<string>([currentMonthKey, ...data]);
+        setMonths([...monthSet].sort().reverse());
+      })
+      .catch(() => setMonths([currentMonthKey]));
+  }, []);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#111827_100%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">

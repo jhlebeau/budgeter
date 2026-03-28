@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
-import { useBudget } from "../budget-context";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useBudget, ApiTransaction, toTransaction, Transaction } from "../budget-context";
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 import { getCurrentMonthKey } from "@/lib/month-utils";
 import { transactionsTheme as theme } from "../ui/dashboard-theme";
+
+const PAGE_SIZE = 25;
 
 type FormData = {
   amount: string;
@@ -117,14 +119,55 @@ function MetricCard({
   );
 }
 
+type PagedResponse = {
+  transactions: ApiTransaction[];
+  total: number;
+  page: number;
+  pageSize: number;
+  monthSpend: number;
+  monthCount: number;
+  activeRecurringSeriesCount: number;
+};
+
 export default function TransactionsPage() {
-  const {
-    categories,
-    transactions,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-  } = useBudget();
+  const { categories, addTransaction, updateTransaction, deleteTransaction } = useBudget();
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [monthSpend, setMonthSpend] = useState(0);
+  const [monthCount, setMonthCount] = useState(0);
+  const [activeRecurringSeriesCount, setActiveRecurringSeriesCount] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchTransactions = useCallback(
+    (targetPage: number) => {
+      fetch(`/api/transactions?page=${targetPage}&pageSize=${PAGE_SIZE}`)
+        .then((r) => (r.ok ? (r.json() as Promise<PagedResponse>) : null))
+        .then((data) => {
+          if (!data) return;
+          setTransactions(data.transactions.map(toTransaction));
+          setTotal(data.total);
+          setPage(data.page);
+          setMonthSpend(data.monthSpend);
+          setMonthCount(data.monthCount);
+          setActiveRecurringSeriesCount(data.activeRecurringSeriesCount);
+        })
+        .catch(() => null);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    fetchTransactions(page);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
+
+  const refresh = (targetPage = 0) => {
+    setPage(targetPage);
+    setRefreshKey((k) => k + 1);
+  };
+
   const [form, setForm] = useState<FormData>(() => ({
     ...emptyForm,
     date: getDefaultDate(),
@@ -174,10 +217,8 @@ export default function TransactionsPage() {
       return;
     }
 
-    setForm({
-      ...emptyForm,
-      date: getDefaultDate(),
-    });
+    setForm({ ...emptyForm, date: getDefaultDate() });
+    refresh(0);
   };
 
   const startEditing = (id: string) => {
@@ -220,29 +261,10 @@ export default function TransactionsPage() {
     setEditScopeForId(null);
     setEditForm(emptyForm);
     setEditError("");
+    refresh(page);
   };
 
-  const monthTransactions = useMemo(
-    () => transactions.filter((transaction) => transaction.date.slice(0, 7) === currentMonthKey),
-    [currentMonthKey, transactions],
-  );
-  const monthSpend = monthTransactions.reduce(
-    (total, transaction) => total + transaction.amount,
-    0,
-  );
-  const activeRecurringSeriesCount = useMemo(
-    () =>
-      new Set(
-        transactions
-          .filter(
-            (transaction) =>
-              transaction.recurringSeriesId !== null &&
-              transaction.recurringSeriesStatus === "active",
-          )
-          .map((transaction) => transaction.recurringSeriesId),
-      ).size,
-    [transactions],
-  );
+  void currentMonthKey;
 
   return (
     <main className={theme.page}>
@@ -276,7 +298,7 @@ export default function TransactionsPage() {
               <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
                 <p className="text-sm text-slate-300">Transactions tracked</p>
                 <p className="mt-2 text-2xl font-semibold text-slate-50">
-                  {transactions.length}
+                  {total}
                 </p>
               </div>
             </div>
@@ -287,7 +309,7 @@ export default function TransactionsPage() {
           <MetricCard
             label="Monthly spend logged"
             value={currencyFormatter.format(monthSpend)}
-            detail={`Across ${monthTransactions.length} transaction${monthTransactions.length === 1 ? "" : "s"} in ${currentMonthKey}`}
+            detail={`Across ${monthCount} transaction${monthCount === 1 ? "" : "s"} this month`}
           />
           <MetricCard
             label="Recurring transactions"
@@ -459,7 +481,7 @@ export default function TransactionsPage() {
                   {currencyFormatter.format(monthSpend)}
                 </p>
                 <p className="mt-2 text-sm text-slate-300">
-                  {monthTransactions.length} transactions logged this month
+                  {monthCount} transactions logged this month
                 </p>
               </div>
               <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
@@ -771,6 +793,7 @@ export default function TransactionsPage() {
                                   if (!shouldDelete) return;
                                   await deleteTransaction(transaction.id, "this");
                                   setDeleteScopeForId(null);
+                                  refresh(0);
                                 }}
                                 className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                               >
@@ -785,6 +808,7 @@ export default function TransactionsPage() {
                                   if (!shouldDelete) return;
                                   await deleteTransaction(transaction.id, "future");
                                   setDeleteScopeForId(null);
+                                  refresh(0);
                                 }}
                                 className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                               >
@@ -799,6 +823,7 @@ export default function TransactionsPage() {
                                   if (!shouldDelete) return;
                                   await deleteTransaction(transaction.id, "all");
                                   setDeleteScopeForId(null);
+                                  refresh(0);
                                 }}
                                 className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                               >
@@ -828,6 +853,7 @@ export default function TransactionsPage() {
                               const shouldDelete = window.confirm("Delete this transaction?");
                               if (!shouldDelete) return;
                               await deleteTransaction(transaction.id, "this");
+                              refresh(0);
                             }}
                             className="inline-flex items-center justify-center rounded-2xl border border-red-400/35 bg-slate-950/85 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-950/60"
                           >
@@ -839,13 +865,47 @@ export default function TransactionsPage() {
                   )}
                 </li>
               ))}
-              {transactions.length === 0 ? (
+              {total === 0 ? (
                 <li className="rounded-3xl border border-dashed border-violet-400/25 bg-slate-900/60 p-8 text-center text-sm text-slate-300">
                   No transactions yet. Add your first transaction to start building a
                   cleaner spending history.
                 </li>
               ) : null}
             </ul>
+
+            {total > PAGE_SIZE ? (
+              <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-4 text-sm text-slate-400">
+                <span>
+                  {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={page === 0}
+                    onClick={() => {
+                      const prev = page - 1;
+                      setPage(prev);
+                      fetchTransactions(prev);
+                    }}
+                    className="rounded-xl border border-violet-400/25 bg-slate-950/80 px-3 py-1.5 text-violet-200 transition hover:bg-violet-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={(page + 1) * PAGE_SIZE >= total}
+                    onClick={() => {
+                      const next = page + 1;
+                      setPage(next);
+                      fetchTransactions(next);
+                    }}
+                    className="rounded-xl border border-violet-400/25 bg-slate-950/80 px-3 py-1.5 text-violet-200 transition hover:bg-violet-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </SectionCard>
         </div>
       </div>

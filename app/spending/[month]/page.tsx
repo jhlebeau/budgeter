@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
-import { useBudget } from "../../budget-context";
+import { useEffect, useMemo, useState } from "react";
+import { useBudget, ApiTransaction, toTransaction, Transaction } from "../../budget-context";
 import { isMonthInRange } from "@/lib/month-utils";
 import { UNASSIGNED_CATEGORY_NAME } from "@/lib/spending-category-constants";
 import { reportsTheme as theme } from "../../ui/dashboard-theme";
@@ -78,7 +78,18 @@ function MetricCard({
 
 export default function SpendingMonthPage() {
   const { month } = useParams<{ month: string }>();
-  const { categories, savingCategories, transactions, incomes } = useBudget();
+  const { categories, savingCategories, incomes } = useBudget();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}$/.test(month)) return;
+    fetch(`/api/transactions?month=${encodeURIComponent(month)}`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ transactions: ApiTransaction[] }>) : null))
+      .then((data) => {
+        if (data) setTransactions(data.transactions.map(toTransaction));
+      })
+      .catch(() => null);
+  }, [month]);
 
   const isValidMonth =
     /^\d{4}-\d{2}$/.test(month) &&

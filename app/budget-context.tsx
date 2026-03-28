@@ -86,7 +86,6 @@ type BudgetContextValue = {
   logout: () => Promise<void>;
   categories: Category[];
   savingCategories: Category[];
-  transactions: Transaction[];
   incomes: Income[];
   addCategory: (
     name: string,
@@ -188,7 +187,7 @@ type ApiSavingCategory = {
   limitValue: number;
 };
 
-type ApiTransaction = {
+export type ApiTransaction = {
   id: string;
   amount: number;
   date: string;
@@ -233,7 +232,7 @@ const toCategory = (category: ApiCategory): Category => ({
   limitValue: category.limitValue,
 });
 
-const toTransaction = (transaction: ApiTransaction): Transaction => {
+export const toTransaction = (transaction: ApiTransaction): Transaction => {
   const recurringEndDate = transaction.recurringSeries?.endDate
     ? transaction.recurringSeries.endDate.slice(0, 10)
     : null;
@@ -269,7 +268,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingCategories, setSavingCategories] = useState<Category[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
 
   useEffect(() => {
@@ -285,7 +283,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
   const setCurrentUser = (user: AppUser | null) => {
     setCategories([]);
     setSavingCategories([]);
-    setTransactions([]);
     setIncomes([]);
     setCurrentUserState(user);
   };
@@ -312,45 +309,34 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     let isActive = true;
 
     const load = async () => {
-      const [
-        categoriesResponse,
-        savingCategoriesResponse,
-        transactionsResponse,
-        incomesResponse,
-      ] =
+      const [categoriesResponse, savingCategoriesResponse, incomesResponse] =
         await Promise.all([
           authFetch("/api/spending-categories", { cache: "no-store" }),
           authFetch("/api/saving-categories", { cache: "no-store" }),
-          authFetch("/api/transactions", { cache: "no-store" }),
           authFetch("/api/income-sources", { cache: "no-store" }),
         ]);
 
       if (
         !categoriesResponse ||
         !savingCategoriesResponse ||
-        !transactionsResponse ||
         !incomesResponse ||
         !isActive ||
         !categoriesResponse.ok ||
         !savingCategoriesResponse.ok ||
-        !transactionsResponse.ok ||
         !incomesResponse.ok
       ) {
         return;
       }
 
-      const [categoriesData, savingCategoriesData, transactionsData, incomesData] =
-        await Promise.all([
+      const [categoriesData, savingCategoriesData, incomesData] = await Promise.all([
         categoriesResponse.json() as Promise<ApiCategory[]>,
         savingCategoriesResponse.json() as Promise<ApiSavingCategory[]>,
-        transactionsResponse.json() as Promise<ApiTransaction[]>,
         incomesResponse.json() as Promise<ApiIncome[]>,
       ]);
 
       if (!isActive) return;
       setCategories(categoriesData.map(toCategory));
       setSavingCategories(savingCategoriesData.map(toCategory));
-      setTransactions(transactionsData.map(toTransaction));
       setIncomes(incomesData.map(toIncome));
     };
 
@@ -359,13 +345,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       isActive = false;
     };
   }, [authFetch, currentUser]);
-
-  const refreshTransactions = async () => {
-    const response = await authFetch("/api/transactions", { cache: "no-store" });
-    if (!response || !response.ok) return;
-    const transactionsData = (await response.json()) as ApiTransaction[];
-    setTransactions(transactionsData.map(toTransaction));
-  };
 
   const refreshCategories = async () => {
     const response = await authFetch("/api/spending-categories", { cache: "no-store" });
@@ -448,13 +427,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     setCategories((current) =>
       current.map((category) => (category.id === id ? toCategory(updated) : category)),
     );
-    setTransactions((current) =>
-      current.map((transaction) =>
-        transaction.categoryId === id
-          ? { ...transaction, categoryName: updated.name }
-          : transaction,
-      ),
-    );
     return true;
   };
 
@@ -464,7 +436,7 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     });
     if (!response || !response.ok) return;
 
-    await Promise.all([refreshCategories(), refreshTransactions()]);
+    await refreshCategories();
   };
 
   const addSavingCategory = async (
@@ -568,7 +540,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     if (!response.ok) {
       return getSafeCreateErrorMessage("transaction", response.status);
     }
-    await refreshTransactions();
     return null;
   };
 
@@ -589,7 +560,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }),
     });
     if (!response || !response.ok) return;
-    await refreshTransactions();
   };
 
   const deleteTransaction = async (id: string, scope: RecurrenceScope = "this") => {
@@ -600,7 +570,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
       }),
     });
     if (!response || !response.ok) return;
-    await refreshTransactions();
   };
 
   const addIncome = async (income: IncomeInput) => {
@@ -710,7 +679,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
 
     setCategories([]);
     setSavingCategories([]);
-    setTransactions([]);
     setIncomes([]);
   };
 
@@ -723,7 +691,6 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
         logout,
         categories,
         savingCategories,
-        transactions,
         incomes,
         addCategory,
         updateCategoryLimit,

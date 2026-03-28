@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dateKey, generateRecurringDates, toUtcDateOnly } from "@/lib/recurring";
 import { requireUserId, userExists } from "@/lib/api-user";
+import { getCurrentMonthKey } from "@/lib/month-utils";
 import {
   DESCRIPTION_MAX_LENGTH,
   isUuidLikeOrLegacyId,
@@ -18,14 +19,7 @@ const parseDate = (value: unknown) => {
   return date;
 };
 
-export async function GET(request: Request) {
-  const { userId, errorResponse } = await requireUserId();
-  if (errorResponse || !userId) return errorResponse!;
-  if (!(await userExists(userId))) {
-    return NextResponse.json({ error: "User not found." }, { status: 401 });
-  }
-
-  const now = toUtcDateOnly(new Date());
+async function generateMissingRecurringTransactions(userId: string, now: Date) {
   const recurringSeries = await prisma.recurringTransaction.findMany({
     where: { userId },
     include: {
@@ -97,13 +91,80 @@ export async function GET(request: Request) {
       });
     }
   }
+}
 
-  const transactions = await prisma.transaction.findMany({
-    where: { userId },
-    include: { category: true, recurringSeries: true },
-    orderBy: { date: "desc" },
+export async function GET(request: Request) {
+  const { userId, errorResponse } = await requireUserId();
+  if (errorResponse || !userId) return errorResponse!;
+  if (!(await userExists(userId))) {
+    return NextResponse.json({ error: "User not found." }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const monthParam = searchParams.get("month");
+  const pageParam = parseInt(searchParams.get("page") ?? "0");
+  const pageSizeParam = parseInt(searchParams.get("pageSize") ?? "25");
+
+  const page = Number.isFinite(pageParam) ? Math.max(0, pageParam) : 0;
+  const pageSize = Number.isFinite(pageSizeParam)
+    ? Math.min(100, Math.max(1, pageSizeParam))
+    : 25;
+
+  const now = toUtcDateOnly(new Date());
+  await generateMissingRecurringTransactions(userId, now);
+
+  // Month-filtered response (used by spending report pages)
+  if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+    const [year, month] = monthParam.split("-").map(Number);
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
+
+    const transactions = await prisma.transaction.findMany({
+      where: { userId, date: { gte: startDate, lt: endDate } },
+      include: { category: true, recurringSeries: true },
+      orderBy: { date: "desc" },
+    });
+    return NextResponse.json({ transactions });
+  }
+
+  // Paginated response (used by the transactions page)
+  const currentMonthKey = getCurrentMonthKey();
+  const [cmYear, cmMonth] = currentMonthKey.split("-").map(Number);
+  const cmStart = new Date(Date.UTC(cmYear, cmMonth - 1, 1));
+  const cmEnd = new Date(Date.UTC(cmYear, cmMonth, 1));
+
+  const [transactions, total, monthAgg, activeRecurringSeriesCount] =
+    await Promise.all([
+      prisma.transaction.findMany({
+        where: { userId },
+        include: { category: true, recurringSeries: true },
+        orderBy: { date: "desc" },
+        take: pageSize,
+        skip: page * pageSize,
+      }),
+      prisma.transaction.count({ where: { userId } }),
+      prisma.transaction.aggregate({
+        where: { userId, date: { gte: cmStart, lt: cmEnd } },
+        _sum: { amount: true },
+        _count: true,
+      }),
+      prisma.recurringTransaction.count({
+        where: {
+          userId,
+          OR: [{ endDate: null }, { endDate: { gte: new Date() } }],
+        },
+      }),
+    ]);
+
+  return NextResponse.json({
+    transactions,
+    total,
+    page,
+    pageSize,
+    monthSpend: monthAgg._sum.amount ?? 0,
+    monthCount: monthAgg._count,
+    activeRecurringSeriesCount,
   });
-  return NextResponse.json(transactions);
 }
 
 export async function POST(request: Request) {

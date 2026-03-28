@@ -26,6 +26,7 @@ export function SiteNav() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isSetupActive = setupMatch.some(
@@ -60,7 +61,10 @@ export function SiteNav() {
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
-      if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const insideButton = buttonRef.current?.contains(target) ?? false;
+      const insideDropdown = dropdownRef.current?.contains(target) ?? false;
+      if (!insideButton && !insideDropdown) {
         setDropdownOpen(false);
       }
     }
@@ -145,6 +149,7 @@ export function SiteNav() {
       {dropdownOpen &&
         createPortal(
           <div
+            ref={dropdownRef}
             style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left }}
             className="z-50 min-w-[140px] rounded-2xl border border-white/10 bg-slate-950/95 py-1.5 shadow-[0_16px_48px_-12px_rgba(2,6,23,0.8)] backdrop-blur-xl"
             onMouseEnter={openDropdown}
