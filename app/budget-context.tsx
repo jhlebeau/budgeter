@@ -81,7 +81,9 @@ export type IncomeInput = {
 
 type BudgetContextValue = {
   currentUser: AppUser | null;
+  sessionLoading: boolean;
   setCurrentUser: (user: AppUser | null) => void;
+  logout: () => Promise<void>;
   categories: Category[];
   savingCategories: Category[];
   transactions: Transaction[];
@@ -264,10 +266,21 @@ const toTransaction = (transaction: ApiTransaction): Transaction => {
 
 export function BudgetProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUserState] = useState<AppUser | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingCategories, setSavingCategories] = useState<Category[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((user: AppUser | null) => {
+        if (user) setCurrentUserState(user);
+      })
+      .catch(() => null)
+      .finally(() => setSessionLoading(false));
+  }, []);
 
   const setCurrentUser = (user: AppUser | null) => {
     setCategories([]);
@@ -277,13 +290,17 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     setCurrentUserState(user);
   };
 
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setCurrentUser(null);
+  };
+
   const authFetch = useCallback(async (url: string, init?: RequestInit) => {
     if (!currentUser) return null;
     return fetch(url, {
       ...init,
       headers: {
         "Content-Type": "application/json",
-        "x-user-id": currentUser.id,
         ...(init?.headers ?? {}),
       },
     });
@@ -701,7 +718,9 @@ export function BudgetProvider({ children }: { children: ReactNode }) {
     <BudgetContext.Provider
       value={{
         currentUser,
+        sessionLoading,
         setCurrentUser,
+        logout,
         categories,
         savingCategories,
         transactions,

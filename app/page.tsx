@@ -11,6 +11,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { currentUser, setCurrentUser } = useBudget();
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,17 +36,25 @@ export default function LoginPage() {
       setError("Username must be 32 characters or fewer.");
       return;
     }
+    if (!password) {
+      setError("Please enter your password.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/users?username=${encodeURIComponent(trimmed)}`);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: trimmed, password }),
+      });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          setError("User not found. Create a new account first.");
+        if (response.status === 401) {
+          setError("Incorrect username or password.");
           return;
         }
-        setError("Unable to continue right now.");
+        setError("Unable to log in right now.");
         return;
       }
 
@@ -88,7 +97,7 @@ export default function LoginPage() {
           </p>
           <h2 className="mt-3 font-display text-4xl leading-none text-slate-50">Log in</h2>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            Continue with your username or create a new account.
+            Continue with your username and password or create a new account.
           </p>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
@@ -101,6 +110,14 @@ export default function LoginPage() {
               pattern="^[A-Za-z0-9]+$"
               title="Username must contain only letters and numbers."
               maxLength={32}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className={inputClass}
               required
             />
             <div className="grid gap-3 sm:grid-cols-2">

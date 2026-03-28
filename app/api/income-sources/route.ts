@@ -18,7 +18,7 @@ const isTaxState = (value: unknown): value is TaxStateCode =>
   typeof value === "string" && TAX_STATES.includes(value as TaxStateCode);
 
 export async function GET(request: Request) {
-  const { userId, errorResponse } = requireUserId(request);
+  const { userId, errorResponse } = await requireUserId();
   if (errorResponse || !userId) return errorResponse!;
   if (!(await userExists(userId))) {
     return NextResponse.json({ error: "User not found." }, { status: 401 });
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { userId, errorResponse } = requireUserId(request);
+    const { userId, errorResponse } = await requireUserId();
     if (errorResponse || !userId) return errorResponse!;
     if (!(await userExists(userId))) {
       return NextResponse.json({ error: "User not found." }, { status: 401 });

@@ -111,6 +111,7 @@ model User {
   id                   String   @id @default(uuid())
   username             String
   usernameKey          String   @unique
+  passwordHash         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   incomeSources        IncomeSource[]

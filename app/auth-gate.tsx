@@ -10,15 +10,19 @@ const PUBLIC_PATHS = new Set(["/", "/create-account"]);
 export function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentUser } = useBudget();
+  const { currentUser, sessionLoading } = useBudget();
 
   const isPublicPath = PUBLIC_PATHS.has(pathname);
 
   useEffect(() => {
-    if (!currentUser && !isPublicPath) {
+    if (!sessionLoading && !currentUser && !isPublicPath) {
       router.replace("/");
     }
-  }, [currentUser, isPublicPath, router]);
+  }, [currentUser, isPublicPath, router, sessionLoading]);
+
+  if (sessionLoading) {
+    return null;
+  }
 
   if (!currentUser && !isPublicPath) {
     return null;

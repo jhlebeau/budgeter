@@ -12,6 +12,8 @@ export default function CreateAccountPage() {
   const router = useRouter();
   const { setCurrentUser } = useBudget();
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,13 +33,25 @@ export default function CreateAccountPage() {
       setError("Username must be 32 characters or fewer.");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password.length > 128) {
+      setError("Password must be 128 characters or fewer.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: trimmed }),
+        body: JSON.stringify({ username: trimmed, password }),
       });
 
       if (!response.ok) {
@@ -46,7 +60,8 @@ export default function CreateAccountPage() {
           return;
         }
         if (response.status === 400) {
-          setError("Username must be alphanumeric and 32 characters or fewer.");
+          const data = await response.json() as { error?: string };
+          setError(data.error ?? "Invalid username or password.");
           return;
         }
         setError("Unable to create account right now.");
@@ -80,10 +95,10 @@ export default function CreateAccountPage() {
               New Account
             </p>
             <h2 className="mt-3 font-display text-4xl leading-none text-slate-50">
-              Pick a username
+              Create account
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Choose an alphanumeric username to start a new account.
+              Choose a username and password to get started.
             </p>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-4">
@@ -98,12 +113,30 @@ export default function CreateAccountPage() {
                 maxLength={32}
                 required
               />
+              <input
+                type="password"
+                placeholder="Password (min. 8 characters)"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className={inputClass}
+                minLength={8}
+                maxLength={128}
+                required
+              />
+              <input
+                type="password"
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className={inputClass}
+                required
+              />
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="inline-flex items-center justify-center rounded-2xl bg-orange-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-200 disabled:cursor-not-allowed disabled:bg-orange-900 disabled:text-orange-100"
               >
-                Confirm
+                Create Account
               </button>
               {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
             </form>

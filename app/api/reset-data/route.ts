@@ -4,7 +4,7 @@ import { requireUserId, userExists } from "@/lib/api-user";
 
 export async function DELETE(request: Request) {
   try {
-    const { userId, errorResponse } = requireUserId(request);
+    const { userId, errorResponse } = await requireUserId();
     if (errorResponse || !userId) return errorResponse!;
     if (!(await userExists(userId))) {
       return NextResponse.json({ error: "User not found." }, { status: 401 });
