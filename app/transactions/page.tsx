@@ -291,19 +291,28 @@ export default function TransactionsPage() {
                 maintain a cleaner history of what moved this month.
               </p>
             </div>
-            <div className="grid w-full gap-3 sm:grid-cols-2 lg:max-w-md">
-              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
-                <p className="text-sm text-slate-300">This month</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-50">
-                  {currencyFormatter.format(monthSpend)}
-                </p>
+            <div className="flex w-full flex-col gap-3 lg:max-w-md">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-300">This month</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-50">
+                    {currencyFormatter.format(monthSpend)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
+                  <p className="text-sm text-slate-300">Transactions tracked</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-50">
+                    {total}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-2xl border border-violet-400/25 bg-slate-900/70 p-4">
-                <p className="text-sm text-slate-300">Transactions tracked</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-50">
-                  {total}
-                </p>
-              </div>
+              <a
+                href="/api/transactions/export"
+                download="transactions.csv"
+                className={subtleButtonClass}
+              >
+                Export CSV
+              </a>
             </div>
           </div>
         </header>

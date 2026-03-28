@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBudget } from "../budget-context";
+import { getCurrentMonthKey, isMonthInRange } from "@/lib/month-utils";
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 const actions = [
   { href: "/setup", title: "Set Income, Spending, and Savings", description: "Tune the foundation of your plan.", accent: "border-cyan-400/25" },
@@ -11,15 +17,72 @@ const actions = [
   { href: "/spending", title: "View Spending", description: "Check Monthly Performance", accent: "border-rose-400/25" },
 ];
 
+type MonthStats = {
+  monthSpend: number;
+  monthCount: number;
+};
+
+function StatCard({
+  label,
+  value,
+  valueClass,
+  loading,
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+  loading: boolean;
+}) {
+  return (
+    <div className="rounded-[1.75rem] border border-emerald-400/20 bg-slate-900/78 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/60">{label}</p>
+      {loading ? (
+        <div className="mt-3 h-8 w-28 animate-pulse rounded-lg bg-slate-800/70" />
+      ) : (
+        <p className={`mt-3 text-2xl font-semibold tracking-tight ${valueClass ?? "text-slate-50"}`}>
+          {value}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, logout } = useBudget();
+  const { currentUser, logout, incomes } = useBudget();
+  const [stats, setStats] = useState<MonthStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     if (!currentUser) {
       router.replace("/");
     }
   }, [currentUser, router]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    fetch("/api/transactions?page=0&pageSize=1")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: MonthStats | null) => { if (data) setStats(data); })
+      .catch(() => null)
+      .finally(() => setStatsLoading(false));
+  }, [currentUser]);
+
+  const currentMonthKey = getCurrentMonthKey();
+
+  const monthlyIncome = useMemo(
+    () =>
+      incomes.reduce(
+        (total, income) =>
+          isMonthInRange(currentMonthKey, income.startMonth, income.endMonth)
+            ? total + income.postTaxAmount
+            : total,
+        0,
+      ),
+    [incomes, currentMonthKey],
+  );
+
+  const remaining = monthlyIncome - (stats?.monthSpend ?? 0);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#111827_100%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
@@ -58,6 +121,36 @@ export default function HomePage() {
                 </button>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Budget vs actual for current month */}
+        <section>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/50">
+            This month
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Income"
+              value={currencyFormatter.format(monthlyIncome)}
+              loading={statsLoading}
+            />
+            <StatCard
+              label="Spent"
+              value={currencyFormatter.format(stats?.monthSpend ?? 0)}
+              loading={statsLoading}
+            />
+            <StatCard
+              label="Remaining"
+              value={currencyFormatter.format(remaining)}
+              valueClass={remaining < 0 ? "text-red-400" : "text-emerald-300"}
+              loading={statsLoading}
+            />
+            <StatCard
+              label="Transactions"
+              value={String(stats?.monthCount ?? 0)}
+              loading={statsLoading}
+            />
           </div>
         </section>
 

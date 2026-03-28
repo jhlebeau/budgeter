@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useBudget } from "../budget-context";
 
 const setupDropdownLinks = [
   { href: "/income", label: "Income" },
@@ -23,6 +24,7 @@ const setupMatch = ["/setup", "/income", "/categories", "/savings-categories"];
 export function SiteNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { logout } = useBudget();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -90,7 +92,7 @@ export function SiteNav() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 py-2.5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 py-2.5 sm:px-6 lg:px-8 [&>*:last-child]:ml-auto">
         {/* Home */}
         <Link
           href={homeLink.href}
@@ -144,6 +146,15 @@ export function SiteNav() {
             </Link>
           );
         })}
+
+        {/* Log out */}
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="shrink-0 rounded-xl px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-slate-200"
+        >
+          Log out
+        </button>
       </div>
 
       {dropdownOpen &&
