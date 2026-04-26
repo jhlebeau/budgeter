@@ -22,6 +22,12 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 
 const FEDERAL_STANDARD_DEDUCTION_2026_SINGLE = 16100;
 
+const SOCIAL_SECURITY_WAGE_BASE_2026 = 176_100;
+const SOCIAL_SECURITY_RATE = 0.062;
+const MEDICARE_RATE = 0.0145;
+const ADDITIONAL_MEDICARE_THRESHOLD = 200_000;
+const ADDITIONAL_MEDICARE_RATE = 0.009;
+
 const FEDERAL_BRACKETS_2026_SINGLE = [
   { max: 12400, rate: 0.1 },
   { max: 50400, rate: 0.12 },
@@ -31,6 +37,8 @@ const FEDERAL_BRACKETS_2026_SINGLE = [
   { max: 640600, rate: 0.35 },
   { max: Number.POSITIVE_INFINITY, rate: 0.37 },
 ];
+
+const CALIFORNIA_SDI_RATE = 0.011; // ~1.1% on all wages, no cap (rate set annually by EDD)
 
 const CALIFORNIA_BRACKETS_ESTIMATE = [
   { max: 10756, rate: 0.01 },
@@ -213,11 +221,18 @@ const calculateFederalTax2026Single = (annualIncome: number) => {
   return calculateProgressiveTax(taxableIncome, FEDERAL_BRACKETS_2026_SINGLE);
 };
 
+const calculateFICA = (annualIncome: number) => {
+  const ss = Math.min(annualIncome, SOCIAL_SECURITY_WAGE_BASE_2026) * SOCIAL_SECURITY_RATE;
+  const medicare = annualIncome * MEDICARE_RATE;
+  const additionalMedicare = Math.max(0, annualIncome - ADDITIONAL_MEDICARE_THRESHOLD) * ADDITIONAL_MEDICARE_RATE;
+  return ss + medicare + additionalMedicare;
+};
+
 const calculateStateTax = (annualIncome: number, taxState: TaxState) => {
   if (NO_STATE_INCOME_TAX_STATES.has(taxState)) return 0;
 
   if (taxState === "CA") {
-    return calculateProgressiveTax(annualIncome, CALIFORNIA_BRACKETS_ESTIMATE);
+    return calculateProgressiveTax(annualIncome, CALIFORNIA_BRACKETS_ESTIMATE) + annualIncome * CALIFORNIA_SDI_RATE;
   }
   if (taxState === "CT") {
     return calculateProgressiveTax(annualIncome, CONNECTICUT_BRACKETS_2026_SINGLE);
@@ -254,11 +269,13 @@ const getAutoTaxBreakdown = (annualAmount: number, taxState: TaxState) => {
     return { combinedRate: 0, federalRate: 0, stateRate: 0 };
   }
 
-  const federalTax = calculateFederalTax2026Single(annualAmount);
+  const federalIncomeTax = calculateFederalTax2026Single(annualAmount);
+  const ficaTax = calculateFICA(annualAmount);
   const stateTax = calculateStateTax(annualAmount, taxState);
+  const federalTotal = federalIncomeTax + ficaTax;
   return {
-    combinedRate: ((federalTax + stateTax) / annualAmount) * 100,
-    federalRate: (federalTax / annualAmount) * 100,
+    combinedRate: ((federalTotal + stateTax) / annualAmount) * 100,
+    federalRate: (federalTotal / annualAmount) * 100,
     stateRate: (stateTax / annualAmount) * 100,
   };
 };
@@ -535,7 +552,9 @@ export default function IncomePage() {
       };
     }
 
-    const cumulativeFederalTax = calculateFederalTax2026Single(totalAutoPreTaxAnnual);
+    const cumulativeFederalIncomeTax = calculateFederalTax2026Single(totalAutoPreTaxAnnual);
+    const cumulativeFicaTax = calculateFICA(totalAutoPreTaxAnnual);
+    const cumulativeFederalTax = cumulativeFederalIncomeTax + cumulativeFicaTax;
     const cumulativeStateTax = (
       Object.entries(autoPreTaxAnnualByState) as Array<[TaxState, number]>
     ).reduce(
@@ -825,7 +844,7 @@ export default function IncomePage() {
                   </div>
                   <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
-                      Federal Rate
+                      Federal + FICA
                     </p>
                     <p className="mt-2 text-xl font-semibold text-slate-50">
                       {showAutoTaxPreview
@@ -1152,7 +1171,7 @@ export default function IncomePage() {
                             </div>
                             <div className="rounded-2xl border border-sky-400/20 bg-slate-950/85 p-4">
                               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/70">
-                                Federal
+                                Federal + FICA
                               </p>
                               <p className="mt-2 text-lg font-semibold text-slate-50">
                                 {editAutoBreakdown.federalRate.toFixed(2)}%
